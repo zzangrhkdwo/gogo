@@ -267,7 +267,7 @@
 
       /* ---------- 컴퓨터와 대결 (1:1 · 2:2) ---------- */
       const DIFFS = { easy: { lv: -3, cast: 1.5, lead: 0.2, aim: 0.09, n: '쉬움' }, normal: { lv: 0, cast: 1, lead: 0.6, aim: 0.03, n: '보통' }, hard: { lv: 3, cast: 0.72, lead: 0.95, aim: 0.012, n: '어려움' } };
-      // 컴퓨터 = Skillcom 장수 4명 중 한 명 (한 판에 겹치지 않게). 이름 뒤에 난이도
+      // 컴퓨터 = Skillcom 장수 7명 중 한 명 (한 판에 겹치지 않게). 이름 뒤에 난이도
       function cpuEntry(i, team, lv, diff, tail, ally, used) {
         const left = HERO_IDS.filter(h => !(used || []).includes(h)), QA = window.__forceHeroes, hero = QA && QA.length ? QA.shift() : pick(left.length ? left : HERO_IDS);   // __forceHeroes = 점검용 if (used) used.push(hero);
         return { id: 'cpu' + i, cpu: true, team, hero, nick: HEROES[hero] + (tail ? ' ' + tail : ''), lv, av: makeEnemyAvatar(ally ? 'ally' : i), stat: cpuStat(lv), skills: pickN(ELS, 4), diff };
@@ -360,7 +360,12 @@
         if (!alive) return;
         const pre = { gl: {}, sky: got ? got[1] : null }; if (got) names.forEach((n, i) => { pre.gl[n] = got[0][i]; });
         opt.pre = pre;
-        battle = makeBattle(THREE, opt); starting = false;
+        try { battle = makeBattle(THREE, opt); }
+        catch (e) {   // 혹시 대결 화면을 못 만들면 '불러오는 중' 화면에 갇히지 않게 대기방으로
+          battle = null; starting = false; if (window.console) console.error(e);
+          A.toast('대결을 시작하지 못했어요. 다시 눌러 주세요'); renderLobby(); return;
+        }
+        starting = false;
       }
 
       function makeBattle(THREE, opt) {
