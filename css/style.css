@@ -969,7 +969,7 @@ mark.bad-word { background: #FFE1E2; color: #B3261E; text-decoration: underline 
 .event-copy p b { color: #FFD23F; }
 .event-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; }
 .event-mine { font-size: 13px; color: #FFE9A8; }
-.event-rank { background: rgba(255,255,255,.95); color: var(--ink); border: 2px solid var(--shadow); border-radius: 12px; padding: 10px 12px; }
+.event-rank { background: var(--surface); color: var(--ink); border: 2px solid var(--shadow); border-radius: 12px; padding: 10px 12px; }   /* v48: 휴대폰 어두운 모드에서 흰 바탕 + 흰 글자로 이름·점수가 안 보이던 것 고침 */
 .event-rank h3 { margin: 0 0 6px; font-size: 15px; }
 .event-rank .rank li { padding: 4px 6px; font-size: 13px; }
 @media (max-width: 720px) { .event-box { grid-template-columns: 1fr; padding: 14px; } }
@@ -1026,7 +1026,7 @@ mark.bad-word { background: #FFE1E2; color: #B3261E; text-decoration: underline 
 .cm-item.is-resolved .res-chk { border-color: #1E9E5A; color: #1E9E5A; background: #E6F8EE; }
 .admin-tbl tr.is-resolved td { background: rgba(30,158,90,.07); }
 .admin-tbl th.c, .admin-tbl td.c { text-align: center; }
-.res-note { margin: 8px 0; padding: 8px 12px; border-radius: 8px; background: #FFF6D6; border: 2px solid #FFD23F; font-size: 13px; }
+.res-note { margin: 8px 0; padding: 8px 12px; border-radius: 8px; background: #FFF6D6; color: #1A1F3D; border: 2px solid #FFD23F; font-size: 13px; }
 
 /* ---------- v33: 로그인 팝업 배너 (js/banner.js) · 관리자 배너 탭 ---------- */
 .bn-pop { position: fixed; z-index: 900; top: 84px; left: 50%; transform: translateX(-50%); width: 320px; max-width: calc(100vw - 32px);

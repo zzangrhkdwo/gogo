@@ -1517,3 +1517,37 @@
     }
   };
 })();
+
+/* ---------- 게임 카드 · 첫 화면 소개 그림 (v48) — 예전에는 없어서 검은 칸으로 보였음 ----------
+ *  해 질 녘 조선 마을: 노을 하늘 · 먼 산 · 이장 댁(기와) · 약방(초가) · 흙길 · 왜군 몬스터 · 글자
+ *  건물 그림(img/bld_*.png)은 처음엔 없을 수 있어 도형으로 그리고, 그림이 오면 'gogo:img' 로 다시 그림 */
+(function () {
+  'use strict';
+  const IM = {};
+  function im(n) {
+    let i = IM[n]; if (!i) { i = IM[n] = new Image(); i.decoding = 'async'; i.src = 'games/action/rpg/img/' + n + '.png?v=48'; i.onload = () => { try { window.dispatchEvent(new Event('gogo:img')); } catch (e) { /* noop */ } }; }
+    return i.complete && i.naturalWidth ? i : null;
+  }
+  window.GoGames = window.GoGames || {};
+  window.GoGames.rpg = {
+    id: 'rpg',
+    thumb(ctx, w, h) {
+      const sky = ctx.createLinearGradient(0, 0, 0, h * 0.62); sky.addColorStop(0, '#2E2850'); sky.addColorStop(0.55, '#B8583E'); sky.addColorStop(1, '#F2A65A'); ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#FFE0A0'; ctx.beginPath(); ctx.arc(w * 0.78, h * 0.42, 13, 0, Math.PI * 2); ctx.fill();   // 해
+      ctx.fillStyle = '#4A3550'; ctx.beginPath(); ctx.moveTo(0, h * 0.58); [[0.12, 0.38], [0.26, 0.5], [0.42, 0.34], [0.58, 0.5], [0.72, 0.4], [0.88, 0.52], [1, 0.44]].forEach(([x, y]) => ctx.lineTo(w * x, h * y)); ctx.lineTo(w, h * 0.62); ctx.lineTo(0, h * 0.62); ctx.fill();   // 먼 산
+      ctx.fillStyle = '#5E9A4E'; ctx.fillRect(0, h * 0.6, w, h * 0.4); ctx.fillStyle = '#6DB85C'; for (let i = 0; i < 40; i++) ctx.fillRect((i * 37) % w, h * 0.62 + ((i * 53) % Math.round(h * 0.36)), 3, 2);   // 풀밭
+      ctx.fillStyle = '#C9A46A'; ctx.beginPath(); ctx.moveTo(w * 0.42, h); ctx.lineTo(w * 0.52, h * 0.62); ctx.lineTo(w * 0.6, h * 0.62); ctx.lineTo(w * 0.7, h); ctx.fill();   // 흙길
+      const hall = im('bld_chief'), hut = im('bld_potion');
+      if (hut) ctx.drawImage(hut, w * 0.6, h * 0.36, 82, 82 * hut.naturalHeight / hut.naturalWidth);
+      else { ctx.fillStyle = '#D9B25A'; ctx.beginPath(); ctx.ellipse(w * 0.77, h * 0.55, 34, 14, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#C8B89A'; ctx.fillRect(w * 0.66, h * 0.55, 52, 20); }
+      if (hall) ctx.drawImage(hall, w * 0.02, h * 0.3, 104, 104 * hall.naturalHeight / hall.naturalWidth);
+      else { ctx.fillStyle = '#3A3E48'; ctx.beginPath(); ctx.moveTo(w * 0.02, h * 0.5); ctx.lineTo(w * 0.1, h * 0.36); ctx.lineTo(w * 0.36, h * 0.36); ctx.lineTo(w * 0.44, h * 0.5); ctx.fill(); ctx.fillStyle = '#E8DCC0'; ctx.fillRect(w * 0.06, h * 0.5, w * 0.34, 24); }
+      // 왜군 졸병 (도트, 삿갓 + 창) 둘
+      const px = (x, y, c, ww, hh) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), ww || 3, hh || 3); };
+      [[w * 0.5, h * 0.72], [w * 0.62, h * 0.8]].forEach(([x, y]) => { px(x - 6, y, '#5A5A62', 15, 3); px(x - 3, y - 3, '#5A5A62', 9, 3); px(x - 2, y + 3, '#F0C8A0', 7, 5); px(x - 3, y + 8, '#8A3A2A', 9, 9); px(x - 2, y + 17, '#4A2A20', 3, 5); px(x + 2, y + 17, '#4A2A20', 3, 5); px(x + 8, y - 8, '#7A5A3A', 2, 26); px(x + 7, y - 11, '#E8E8F0', 4, 4); });
+      // 내 마법 (빛 구슬)
+      const g = ctx.createRadialGradient(w * 0.36, h * 0.8, 1, w * 0.36, h * 0.8, 16); g.addColorStop(0, '#FFFFFF'); g.addColorStop(0.4, '#FFE45C'); g.addColorStop(1, 'rgba(255,228,92,0)'); ctx.fillStyle = g; ctx.fillRect(w * 0.36 - 16, h * 0.8 - 16, 32, 32);
+      ctx.font = '19px "Jua", sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#1D2340'; ctx.strokeText('임진왜란 마법 모험', w / 2, h * 0.2); ctx.fillStyle = '#FFE45C'; ctx.fillText('임진왜란 마법 모험', w / 2, h * 0.2);
+    }
+  };
+})();
