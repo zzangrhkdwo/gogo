@@ -531,6 +531,7 @@
     session = { id, board: true, state: 'ready', mode: 'ai', level: 'normal', result: null, save: null };
     try { const last = JSON.parse(localStorage.getItem('gogo_board_pick') || '{}'); if (last.mode && last.mode !== 'online' && !(cfg.noLocal && last.mode === 'local')) { session.mode = last.mode; session.level = last.level || 'normal'; } } catch (e) { /* noop */ }
     if (cfg.players) { session.players = 2; try { const n = +localStorage.getItem('gogo_players_' + id); if (cfg.players.includes(n)) session.players = n; } catch (e) { /* noop */ } }
+    if (cfg.subModes) { session.sub = cfg.subModes[0][0]; try { const v = localStorage.getItem('gogo_sub_' + id); if (cfg.subModes.some(m => m[0] === v)) session.sub = v; } catch (e) { /* noop */ } }   // v49: 둘이서·온라인의 '방식' (예: 닷지 협동/대결)
     session.inst = window.GoGames[id].create($('#gameCanvas'), hooks);
     renderOverlay(); refreshGameRank(); renderBoardCard();
     const musicBtn = $('#btnMusic');
@@ -596,7 +597,7 @@
   const netMax = () => { const cfg = SET.get(session.id) || {}; return cfg.netRoom ? Math.max(...(cfg.players || [2])) : 2; };
   function netTrack() {
     const n = session && session.net; if (!n) return;
-    n.ch.track({ id: Hub.clientId, nick: netNick(), avatar: Hub.user ? Hub.user.avatar : null, joinedAt: n.joinedAt, players: session.players || 2 });
+    n.ch.track({ id: Hub.clientId, nick: netNick(), avatar: Hub.user ? Hub.user.avatar : null, joinedAt: n.joinedAt, players: session.players || 2, sub: session.sub || null });
   }
   function netLeave() {
     const s = session, n = s && s.net; if (!n) return;
@@ -638,7 +639,7 @@
     n.roster = m.roster.map(r => ({ ...r })); n.side = null; n.oppId = null;
     n.oppNick = m.roster.filter(r => r.id !== Hub.clientId).map(r => r.nick).join(', ');
     s.result = null; s.save = null;
-    s.inst.start({ mode: 'online', players: m.players, seed: m.seed, roster: m.roster, me, host: m.roster[0].id === Hub.clientId, level: 'normal' }); BGM.restart();
+    s.inst.start({ mode: 'online', players: m.players, sub: m.sub || null, seed: m.seed, roster: m.roster, me, host: m.roster[0].id === Hub.clientId, level: 'normal' }); BGM.restart();
     netAdvertise();
   }
   function netHostStart() {
@@ -647,7 +648,7 @@
     if (cfg.netRoom) {
       const np = session.players || 2, humans = n.peers.slice(0, netMax());
       if (humans.length > np) { toast('사람이 ' + humans.length + '명이에요. 인원을 ' + humans.length + ' 이상으로 골라 주세요.'); return; }
-      const m = { t: 'start', seed: (Math.random() * 2147483647) | 0, players: np, roster: humans.map(p => ({ id: p.id, nick: p.nick, avatar: p.avatar || null })) };
+      const m = { t: 'start', seed: (Math.random() * 2147483647) | 0, players: np, sub: session.sub || null, roster: humans.map(p => ({ id: p.id, nick: p.nick, avatar: p.avatar || null })) };
       n.ch.send(m); netStartRoom(m); return;
     }
     const hostSide = n.round++ % 2;
@@ -701,7 +702,9 @@
     ov.hidden = st === 'playing';
     const np = session.players || 2;
     if (st === 'ready') {
-      const lv = ['easy', 'normal', 'hard'].map(l => `<button class="btn ${session.mode === 'ai' && session.level === l ? 'btn-sun' : ''}" type="button" data-pick="ai:${l}">${LEVEL_NAME[l]}</button>`).join('');
+      const lvName = l => (cfg.levelNames && cfg.levelNames[l]) || LEVEL_NAME[l];
+      const lv = (cfg.aiLevels || ['easy', 'normal', 'hard']).map(l => `<button class="btn ${session.mode === 'ai' && session.level === l ? 'btn-sun' : ''}" type="button" data-pick="ai:${l}">${lvName(l)}</button>`).join('');
+      const subName = v => ((cfg.subModes || []).find(m => m[0] === v) || [, ''])[1];
       const inRoom = session.mode === 'online' && session.net, roomHost = inRoom && session.net.hostId === Hub.clientId;   // 방 안: 꼭 필요한 것만 (시작 버튼이 화면 밖으로 밀리지 않게)
       ov.innerHTML = `<div class="ov-box ov-board"><div class="ov-title">${g.name}</div>
         ${inRoom ? '' : `<p class="ov-goal">${esc(g.blurb)}</p>`}
@@ -709,9 +712,10 @@
           ${inRoom ? '' : `<div class="mode-row"><span class="mode-lbl">${cfg.aiLabel || 'AI 대전'}</span><div class="mode-btns">${lv}</div></div>`}
           ${cfg.noLocal || inRoom ? '' : `<div class="mode-row"><span class="mode-lbl">오프라인</span><div class="mode-btns"><button class="btn ${session.mode === 'local' ? 'btn-sun' : ''}" type="button" data-pick="local">${np > 2 ? np + '명이' : '둘이서'} 한 기기</button></div></div>`}
           ${cfg.online && !inRoom ? `<div class="mode-row"><span class="mode-lbl">온라인</span><div class="mode-btns"><button class="btn ${session.mode === 'online' ? 'btn-sun' : ''}" type="button" data-pick="online">${cfg.onlineBtn || '다른 기기 친구와'}</button></div></div>` : ''}
+          ${cfg.subModes && session.mode !== 'ai' && (!inRoom || roomHost) ? `<div class="mode-row"><span class="mode-lbl">방식</span><div class="mode-btns">${cfg.subModes.map(([v, t]) => `<button class="btn ${session.sub === v ? 'btn-sun' : ''}" type="button" data-sub="${v}">${esc(t)}</button>`).join('')}</div></div>` : ''}
           ${cfg.players && (!inRoom || roomHost) ? `<div class="mode-row"><span class="mode-lbl">인원</span><div class="mode-btns">${cfg.players.map(n => `<button class="btn ${np === n ? 'btn-sun' : ''}" type="button" data-players="${n}">${esc(playersLabel(cfg, n))}</button>`).join('')}</div></div>` : ''}
         </div>
-        ${session.mode === 'online' ? netPanelHTML(cfg) : `<button class="btn btn-primary" type="button" data-ov="start">${session.mode === 'local' ? (np > 2 ? np + '명' : '둘이서') : LEVEL_NAME[session.level] + (np > 2 ? ' · ' + np + '명' : '')} 시작 ▶</button>`}
+        ${session.mode === 'online' ? netPanelHTML(cfg) : `<button class="btn btn-primary" type="button" data-ov="start">${session.mode === 'local' ? (np > 2 ? np + '명' : '둘이서') + (cfg.subModes ? ' · ' + esc(subName(session.sub).split(' ')[0]) : '') : lvName(session.level) + (np > 2 ? ' · ' + np + '명' : '')} 시작 ▶</button>`}
         <p class="ov-note">${cfg.noteText ? cfg.noteText(session.mode) : session.mode === 'local' ? '포인트 없이 기록만 남아요' : session.mode === 'online' ? `온라인 승리 +${cfg.points.win}P / 패배 ${cfg.points.lose}P` : rankPointText(cfg, np)}${Hub.user ? '' : ' · 손님 플레이'}</p></div>`;
     } else if (st === 'over') {
       const r = session.result || {}, s = session.save || {};
@@ -729,7 +733,7 @@
         ${avCanvas(Hub.user ? Hub.user.avatar : {}, 4, 'full', 'ov-avatar')}
         <div class="ov-title">${title}</div>
         <p class="ov-goal">${esc(r.message || '')}</p>
-        <p class="ov-hint">${session.mode === 'local' ? (multi ? ex.players + '명이서' : '둘이서') : session.mode === 'online' ? '온라인 · ' + esc(session.net ? session.net.oppNick : '상대') : (cfg.aiLabel ? cfg.aiLabel + ' ' : '컴퓨터 ') + LEVEL_NAME[session.level] + (multi ? ' · ' + ex.players + '명' : '')} · ${r.moves ? r.moves + (cfg.category === 'sports' ? '랠리' : cfg.category === 'study' ? '단어' : '수') + ' · ' : ''}${dur(r.duration_sec || 0)}</p>
+        <p class="ov-hint">${session.mode === 'local' ? (multi ? ex.players + '명이서' : '둘이서') : session.mode === 'online' ? '온라인 · ' + esc(session.net ? session.net.oppNick : '상대') : (cfg.aiLabel ? cfg.aiLabel + ' ' : '컴퓨터 ') + ((cfg.levelNames && cfg.levelNames[session.level]) || LEVEL_NAME[session.level]) + (multi ? ' · ' + ex.players + '명' : '')} · ${r.moves ? r.moves + (cfg.category === 'sports' ? '랠리' : cfg.category === 'study' ? '단어' : '수') + ' · ' : ''}${dur(r.duration_sec || 0)}</p>
         ${note}
         ${session.mode === 'online' && session.net
           ? `<div class="ov-btns">${session.net.hostId === Hub.clientId ? `<button class="btn btn-sun" type="button" data-net="start" ${session.net.peers.length >= 2 ? '' : 'disabled'}>한 판 더 ▶</button>` : ''}<button class="btn" type="button" data-net="leave">방 나가기</button></div>${session.net.hostId === Hub.clientId ? '' : '<p class="ov-hint">방장이 한 판 더를 누르면 바로 시작돼요.</p>'}`
@@ -738,6 +742,11 @@
     AV.paintAll(ov);
     if (st === 'ready' && session.mode === 'online' && session.net) ov.scrollTop = 0;   // 방 안: 맨 위(방 코드·시작 버튼)가 보이게
     if (keep) { const ni = ov.querySelector('[data-net-form] input'); if (ni) { ni.value = keep.v; if (keep.f) { ni.focus(); ni.setSelectionRange(ni.value.length, ni.value.length); } } }
+    $$('[data-sub]', ov).forEach(b => b.addEventListener('click', () => {
+      session.sub = b.dataset.sub; netTrack();
+      try { localStorage.setItem('gogo_sub_' + session.id, session.sub); } catch (e) { /* noop */ }
+      renderOverlay();
+    }));
     $$('[data-players]', ov).forEach(b => b.addEventListener('click', () => {
       session.players = +b.dataset.players; netTrack();
       try { localStorage.setItem('gogo_players_' + session.id, String(session.players)); } catch (e) { /* noop */ }
@@ -819,7 +828,7 @@
     if (!session) return;
     session.result = null; session.save = null;
     if (session.board) {
-      session.inst.start({ mode: session.mode, level: session.level, players: session.players || 2 }); BGM.restart();
+      session.inst.start({ mode: session.mode, level: session.level, players: session.players || 2, sub: session.sub || null }); BGM.restart();
       // 휴대폰: 시작하면 게임 화면이 화면 가운데로 오게 (가로로 돌렸을 때 위가 잘리지 않게)
       const cv = $('#gameCanvas'); if (cv && window.matchMedia && matchMedia('(pointer: coarse)').matches) setTimeout(() => { try { cv.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { /* noop */ } }, 80);
       return;
