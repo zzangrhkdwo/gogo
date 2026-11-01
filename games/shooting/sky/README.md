@@ -48,3 +48,10 @@
 - 보스 공격 모양: `game.js` 의 `runPattern` (aimed 조준 · fan 부채꼴 · ring 원형 · spiral 회오리 · rain 비 · wall 벽 · burst 큰 알)
 - 적 종류·체력·점수: `game.js` 의 `HP` · `SCORE` · `spawnWave` · `stepEnemy`
 - 자동 검사: 검사 도구가 `window.__GOGO_QA = {}` 를 먼저 켜면 `__GOGO_QA.sky` 로 상태 보기·보스 바로 부르기 등을 쓸 수 있음 (일반 화면에는 없음)
+
+## v46 — Meshy 그림 (2026-11-01)
+- 비행기·적·보스 15개를 Meshy 3D(고품질, 1개 30크레딧 · 합 450)로 만들고, 위에서 내려다본 모습을 찍어 도트풍 그림으로 바꿈 → `img/`
+  - `p0`(1P 빨강) · `p1`(2P 파랑, 같은 모델 색만 바꿈) · `small` · `red`(주황 편대) · `dive` · `bomber` · `big` · `boss1`~`boss10`(스테이지 순서)
+  - 원본 3D 파일은 PC `C:\webgamesite\meshy\sky\*.glb` (위에서 찍기 `render/r.html` · 도트로 바꾸기 `render/skypix.py` 방식)
+- 그림을 못 받으면 예전 도트 그림·도형 보스로 그림 (`spr()` · `drawBoss()`)
+- 보스 맞는 범위·총구 자리(`hw`·`hh`·`guns`)는 그대로

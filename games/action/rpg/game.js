@@ -325,7 +325,7 @@
         const M = MAPBY[id]; if (!M) return;
         const map = getMap(id);
         G.map = map; S.map = id; G.room = null; G.npcs = M.kind === 'village' ? villagers(map) : []; G.onNpc = null; G.shots = []; G.fxs = []; G.pools = []; G.texts = []; Fx.reset(); G.hpGhost = null;
-        if (!quiet) G.title = { t: 0, text: M.kind === 'village' ? M.name : M.name, sub: M.kind === 'village' ? (D.REGIONS[M.region].castle ? '마지막 마을 · 왕성' : `마을 ${M.region + 1}`) : `사냥터 ${M.no} · 권장 Lv.${M.rec}${M.boss ? ' · 보스' : ''}` };
+        if (!quiet) G.title = { t: 0, text: M.kind === 'village' ? M.name : M.name, sub: M.kind === 'village' ? (D.REGIONS[M.region].castle ? '마지막 마을 · 도원수 진영' : `마을 ${M.region + 1}`) : `사냥터 ${M.no} · 권장 Lv.${M.rec}${M.boss ? ' · 보스' : ''}` };
         const p = side && typeof side === 'object' ? side : side === 'R' ? map.startR : side === 'door' ? doorFront(map) : side === 'pos' && S.x ? { x: S.x, y: S.y } : map.startL;
         G.px = p.x; G.py = p.y;
         if (solidAt(map, G.px, G.py)) { const q = map.startL; G.px = q.x; G.py = q.y; }
@@ -526,7 +526,7 @@
           float(G.px, G.py - 70, `레벨 업! Lv.${S.lv}`, '#FFE45C', true);
           Fx.levelUp(G.px, G.py); G.flash = 0.25;
           const learnable = Object.values(SKILLS).filter(s => s.lv === S.lv);
-          if (learnable.length) say(`Lv.${S.lv} — 마법 학교에서 '${learnable[0].name}'을(를) 배울 수 있어요!`, 3.5);
+          if (learnable.length) say(`Lv.${S.lv} — 도술 서원에서 '${learnable[0].name}'을(를) 배울 수 있어요!`, 3.5);
           else say(`스탯 포인트 +${CFG.statPerLevel || 2}! 왼쪽 위 얼굴을 눌러 원하는 스탯을 올려요`, 3.2);
           submitRank(); markDirty(true); if (net) net.retrack();
         }
@@ -860,7 +860,7 @@
         if (bim) {
           const b = o.b, ww = b.w * TS + (b.type === 'castle' ? 90 : 34), hh = bim.naturalHeight * ww / bim.naturalWidth, cx0 = (b.x + b.w / 2) * TS, by = (b.y + b.h) * TS + 6;
           c.drawImage(bim, Math.round(cx0 - ww / 2), Math.round(by - hh), Math.round(ww), Math.round(hh));
-          const label = b.type === 'castle' ? '왕성 · 퀘스트' : b.name; c.font = '13px "Jua", "Malgun Gothic", sans-serif'; const lw = c.measureText(label).width + 20, ly = by - hh - 4;
+          const label = b.type === 'castle' ? '도원수 진영 · 퀘스트' : b.name; c.font = '13px "Jua", "Malgun Gothic", sans-serif'; const lw = c.measureText(label).width + 20, ly = by - hh - 4;
           c.fillStyle = 'rgba(10,14,36,.82)'; c.fillRect(cx0 - lw / 2, ly - 11, lw, 22); c.fillStyle = '#FFD23F'; c.fillRect(cx0 - lw / 2, ly + 10, lw, 2);
           c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = b.type === 'potion' ? '#FF9AA0' : b.type === 'school' ? '#D8B8FF' : b.type === 'chief' ? '#9AF0B0' : '#FFE45C'; c.fillText(label, cx0, ly + 1);
           return;
@@ -1200,17 +1200,17 @@
           } else h += `<div class="rg-detail hint">칸을 누르면 자세히 보여요. 장비는 <b>입기</b>, 물약은 <b>쓰기</b>. 사냥터 몬스터가 장비를 떨어뜨려요 (보스는 꼭!)</div>`;
           h += '</section></div>';
         } else if (k === 'skill') {
-          h = head('마법', '마법을 누른 뒤 1~4 칸 버튼으로 넣어요. 같은 마법을 다른 칸에 넣으면 옮겨져요. 새 마법은 마을의 <b>마법 학교</b>에서 배워요.');
+          h = head('마법', '마법을 누른 뒤 1~4 칸 버튼으로 넣어요. 같은 마법을 다른 칸에 넣으면 옮겨져요. 새 마법은 마을의 <b>도술 서원</b>에서 배워요.');
           h += `<div class="rg-slots">${[0, 1, 2, 3].map(i => { const sk = skill(S.slots[i]); return `<span class="rg-slot"><b>${i + 1}</b>${sk ? `<img class="rg-sk" src="${Fx.iconURL(sk)}" alt="">${sk.name}` : '<i>비어 있음</i>'}</span>`; }).join('')}</div>`;
-          h += `<ul class="rg-list">${S.skills.length ? S.skills.map(id => { const sk = skill(id); return `<li class="rg-row"><img class="rg-sk" src="${Fx.iconURL(sk)}" alt=""><span class="grow"><span class="nm">${sk.fusion ? '융합 · ' : ''}${sk.name} <small style="color:#AEB7E0">Lv.${sk.lv}</small></span><span class="ds">${describe(sk)}</span></span>${[0, 1, 2, 3].map(i => `<button type="button" class="rg-mini${S.slots[i] === id ? ' on' : ' ghost'}" data-slot="${i}:${id}">${i + 1}</button>`).join('')}</li>`; }).join('') : '<li class="rg-row">아직 배운 마법이 없어요. Lv.3이 되면 새싹 마을 마법 학교에서 파이어볼을 배울 수 있어요.</li>'}</ul>`;
+          h += `<ul class="rg-list">${S.skills.length ? S.skills.map(id => { const sk = skill(id); return `<li class="rg-row"><img class="rg-sk" src="${Fx.iconURL(sk)}" alt=""><span class="grow"><span class="nm">${sk.fusion ? '융합 · ' : ''}${sk.name} <small style="color:#AEB7E0">Lv.${sk.lv}</small></span><span class="ds">${describe(sk)}</span></span>${[0, 1, 2, 3].map(i => `<button type="button" class="rg-mini${S.slots[i] === id ? ' on' : ' ghost'}" data-slot="${i}:${id}">${i + 1}</button>`).join('')}</li>`; }).join('') : '<li class="rg-row">아직 배운 마법이 없어요. Lv.3이 되면 솔뫼 마을 도술 서원에서 파이어볼을 배울 수 있어요.</li>'}</ul>`;
         } else if (k === 'potion') {
           const ri = G.map.M.region, t = tab.potion || 'buy';
-          h = head('포션 가게', `<span class="rg-gold">${fmtN(S.gold)} G</span> · 이 마을은 ${ri + 1}단계 포션까지 팔아요`) + npcBox() + tabs('potion', [['buy', '사기'], ['sell', '팔기']]);
+          h = head('약방', `<span class="rg-gold">${fmtN(S.gold)} G</span> · 이 마을은 ${ri + 1}단계 포션까지 팔아요`) + npcBox() + tabs('potion', [['buy', '사기'], ['sell', '팔기']]);
           if (t === 'buy') h += `<ul class="rg-list">${D.POTIONS.filter(p => p.tier <= ri).map(p => `<li class="rg-row">${itemIcon(p.id)}<span class="grow"><span class="nm">${p.name} <small style="color:#AEB7E0">가진 수 ${count(p.id)}</small></span><span class="ds">${p.desc} · ${fmtN(p.price)} G</span></span><button type="button" class="rg-mini" data-buy="${p.id}:1" ${S.gold >= p.price ? '' : 'disabled'}>1개</button><button type="button" class="rg-mini" data-buy="${p.id}:10" ${S.gold >= p.price * 10 ? '' : 'disabled'}>10개</button></li>`).join('')}</ul>`;
           else h += `<p class="sub">팔면 원래 값의 40%를 받아요. 입고 있는 장비는 팔 수 없어요.</p><ul class="rg-list">${S.inv.length ? S.inv.map(x => { const it = ITEMS[x.id], pr = Math.max(1, Math.round(it.price * 0.4)); return `<li class="rg-row">${itemIcon(x.id)}<span class="grow"><span class="nm">${it.name} ×${x.n}</span><span class="ds">1개 ${fmtN(pr)} G</span></span><button type="button" class="rg-mini" data-sell="${x.id}:1">1개</button>${x.n > 1 ? `<button type="button" class="rg-mini ghost" data-sell="${x.id}:${x.n}">모두</button>` : ''}</li>`; }).join('') : '<li class="rg-row">팔 물건이 없어요</li>'}</ul>`;
         } else if (k === 'school') {
           const ri = G.map.M.region, t = tab.school || 'learn';
-          h = head('마법 학교', `<span class="rg-gold">${fmtN(S.gold)} G</span> · 마법 배우기 · 두 원소 섞기`) + npcBox() + tabs('school', [['learn', '마법 배우기'], ['fuse', '마법 융합']]);
+          h = head('도술 서원', `<span class="rg-gold">${fmtN(S.gold)} G</span> · 마법 배우기 · 두 원소 섞기`) + npcBox() + tabs('school', [['learn', '마법 배우기'], ['fuse', '마법 융합']]);
           if (t === 'learn') {
             const list = Object.values(SKILLS).filter(s => s.village <= ri).sort((a, b) => a.lv - b.lv);
             h += `<p class="sub">이 마을까지의 마법을 배울 수 있어요. 다음 마을에 가면 더 강한 마법이 있어요.</p><ul class="rg-list">${list.map(s => { const has = S.skills.includes(s.id), ok = S.lv >= s.lv, sk = skill(s.id); return `<li class="rg-row${ok || has ? '' : ' off'}"><img class="rg-sk" src="${Fx.iconURL(sk)}" alt=""><span class="grow"><span class="nm">${s.name} <small style="color:#AEB7E0">Lv.${s.lv} · ${fmtN(s.price)} G</small></span><span class="ds">${describe(sk)}</span></span>${has ? '<span class="rg-mini on">배움</span>' : `<button type="button" class="rg-mini" data-learn="${s.id}" ${ok && S.gold >= s.price ? '' : 'disabled'}>${ok ? '배우기' : 'Lv.' + s.lv}</button>`}</li>`; }).join('')}</ul>`;
@@ -1230,7 +1230,7 @@
           }
         } else if (k === 'chief') {
           const vis = S.visited;
-          h = head('이장 집', '이 마을이 귀환 장소가 돼요. 가 본 마을·사냥터로 무료 이동') + npcBox();
+          h = head('이장 댁', '이 마을이 귀환 장소가 돼요. 가 본 마을·사냥터로 무료 이동') + npcBox();
           h += `<div class="rg-tabs"><button type="button" class="rg-mini" data-savenow>지금 저장</button><span class="rg-mini ghost" style="cursor:default">처치 ${fmtN(S.kills)} · 플레이 ${Math.floor(S.play / 60)}분</span></div>`;
           D.REGIONS.forEach((R, ri) => {
             const vid = 'v' + (ri + 1), fs = D.MAPS.filter(m => m.kind === 'field' && m.region === ri);
@@ -1239,7 +1239,7 @@
           });
           h += '<p class="sub" style="margin-top:8px">※ 퀘스트는 준비 중이에요. 나중에 마지막 마을의 성에서 나눠 줄 예정이에요.</p>';
         } else if (k === 'castle') {
-          h = head('왕성', '퀘스트는 아직 준비 중이에요. 다음 업데이트에서 이곳에서 퀘스트를 받을 수 있어요.') + npcBox();
+          h = head('도원수 진영', '퀘스트는 아직 준비 중이에요. 다음 업데이트에서 이곳에서 퀘스트를 받을 수 있어요.') + npcBox();
         } else if (k === 'tradeAsk') {
           const pp = paneArg.pp;
           h = head('거래 신청', '같은 지도에 있는 사람과 아이템·골드를 바꿀 수 있어요. 두 사람 모두 확인을 눌러야 바뀌어요.');
@@ -1289,18 +1289,18 @@
             h += `<p class="sub">한 서버에 ${cap}명까지 · 서버 ${rows.length}개. 몬스터와 떨어진 물건은 각자 따로예요. ${L.demo ? '(체험 모드: 같은 브라우저의 다른 탭끼리만 연결돼요)' : ''}</p>`;
           }
         } else if (k === 'dead') {
-          h = `<h3>쓰러졌어요…</h3><p class="sub">경험치를 ${fmtN(paneArg.loss)} 잃었어요. (레벨은 그대로)<br>마지막으로 들른 마을(${MAPBY[S.home].name})의 이장 집 앞에서 다시 시작해요.</p><button type="button" class="btn btn-primary" data-revive>마을에서 다시 시작</button>`;
+          h = `<h3>쓰러졌어요…</h3><p class="sub">경험치를 ${fmtN(paneArg.loss)} 잃었어요. (레벨은 그대로)<br>마지막으로 들른 마을(${MAPBY[S.home].name})의 이장 댁 앞에서 다시 시작해요.</p><button type="button" class="btn btn-primary" data-revive>마을에서 다시 시작</button>`;
         } else if (k === 'help') {
           h = head('도움말', '내 아바타로 떠나는 도트 RPG — 혼자 플레이 첫 버전') + (imgOk('key') ? `<img src="${imgOk('key').src}" alt="" style="width:100%;border-radius:10px;border:2px solid #0A0E24;margin:4px 0 10px;display:block">` : '');
           h += `<ul class="ult-rules">
             <li><b>이동</b> WASD·방향키 · <b>공격</b> Space·J · <b>마법</b> 1~4 · <b>포션</b> Q(체력) E(마나) · <b>가방</b> I · <b>마법 창</b> K · <b>창 닫기</b> Esc</li>
             <li>휴대폰은 화면 왼쪽을 끌면 이동(조이스틱), 오른쪽 버튼으로 공격·마법·포션. 가로로 돌리면 더 커요.</li>
-            <li>지도 <b>오른쪽 끝 → 다음 지도</b>, 왼쪽 끝 → 이전 지도. 마을 → 사냥터 10곳 → 다음 마을 … 마을 하나가 10레벨씩(새싹 마을 Lv.1~10 … 하늘섬 마을 Lv.71~80), 마지막 불꽃왕성은 Lv.80~100.</li>
-            <li>문으로 걸어 들어가면 <b>건물 안</b>이에요. 안에 있는 사람에게 가까이 가면 이야기해요: <b>포션 가게</b> 미나 · <b>마법 학교</b> 루멘(마법 배우기·융합) · <b>이장 집</b> 이장님(무료 이동·저장). 아래 가운데 문으로 나가요.</li>
+            <li>지도 <b>오른쪽 끝 → 다음 지도</b>, 왼쪽 끝 → 이전 지도. 마을 → 사냥터 10곳 → 다음 마을 … 마을 하나가 10레벨씩(솔뫼 마을 Lv.1~10 … 구름절 마을 Lv.71~80), 마지막 도원수 진영은 Lv.80~100.</li>
+            <li>문으로 걸어 들어가면 <b>건물 안</b>이에요. 안에 있는 사람에게 가까이 가면 이야기해요: <b>약방</b> 미나 · <b>도술 서원</b> 루멘(마법 배우기·융합) · <b>이장 댁</b> 이장님(무료 이동·저장). 아래 가운데 문으로 나가요.</li>
             <li>처음부터 <b>마법 화살</b>(1번 키)을 쓸 수 있어요.</li>
             <li><b>스탯</b>: 레벨이 오를 때마다 포인트 2개 — 왼쪽 위 얼굴(또는 C)을 눌러 힘(피해)·민첩(이동 속도)·지혜(마나 회복)·체력(최대 체력)에 올려요. 스탯마다 최대 50.</li>
             <li><b>거래</b>: 온라인 서버에서 같은 지도에 있는 사람을 누르거나 가까이 가서 F → 거래 신청. 둘 다 확인을 누르면 아이템·골드가 바뀌어요.</li>
-            <li>직업은 없어요. 레벨이 오르면 마법 학교에서 새 마법을 배우고, 두 원소를 섞어 <b>융합 마법</b>을 만들어요.</li>
+            <li>직업은 없어요. 레벨이 오르면 도술 서원에서 새 마법을 배우고, 두 원소를 섞어 <b>융합 마법</b>을 만들어요.</li>
             <li>장비는 몬스터가 떨어뜨려요(보스는 꼭). 입으면 아바타 위에 보이고, 가방의 <b>장비 안보이기</b>로 그림만 숨길 수 있어요.</li>
             <li>쓰러지면 경험치가 조금 줄고 마지막 마을에서 다시 시작해요. <b>귀환 주문서</b>로 언제든 마을로 돌아갈 수 있어요.</li>
           </ul><button type="button" class="btn btn-primary" data-x>모험 시작!</button>`;

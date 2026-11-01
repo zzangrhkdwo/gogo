@@ -1,6 +1,6 @@
 /*
  * gogo?gogo! — skillcom RPG · 건물 안 (v41)
- *   포션 가게 · 마법 학교 · 이장 집 · 왕성 — 문으로 걸어 들어가면 실내 지도로 바뀜
+ *   약방 · 도술 서원 · 이장 댁 · 왕성 — 문으로 걸어 들어가면 실내 지도로 바뀜
  *   실내 = 26 × 15 칸 (832 × 480, 화면 가운데에 놓임). 위 3줄 = 뒷벽, 아래 가운데 2칸 = 나가는 문
  *   사람(NPC)은 사이트 아바타 그림 그대로 (data.js 의 NPCS). 가까이 가면 대화 → 가게·학교·이동 창
  *   world.js 의 __GoRPGParts 에 getRoom · npcSprite · npcPortrait 를 더해 줌
@@ -130,7 +130,7 @@
     const id = 'room-' + type + '-' + region; if (roomCache[id]) return roomCache[id];
     const R = D.REGIONS[region], st = STYLE[type], rnd = seeded(id), B = D.BUILDINGS.concat([D.CASTLE]).find(b => b.type === type);
     const t = new Uint8Array(RW * RH), at = (x, y) => (x < 0 || y < 0 || x >= RW || y >= RH ? 2 : t[y * RW + x]), set = (x, y, v) => { if (x >= 0 && y >= 0 && x < RW && y < RH) t[y * RW + x] = v; };
-    const M = { id, kind: 'room', region, name: B ? B.name === '성' ? '왕성' : B.name : type, type };
+    const M = { id, kind: 'room', region, name: B ? B.name : type, type };
     const map = { id, M, R, w: RW, h: RH, t, at, set, mid: 9, room: type, buildings: [], doors: [], spawns: [], objs: [], water: [], glows: [], fx: [], npcs: [], exitL: null, exitR: null, exit: { x0: 12, x1: 13, y: RH - 1 } };
     // 벽: 위 3줄 · 옆 1줄 · 아래 1줄 (문 2칸 빼고)
     for (let x = 0; x < RW; x++) { for (let y = 0; y < 3; y++) set(x, y, 2); set(x, RH - 1, x >= map.exit.x0 && x <= map.exit.x1 ? 1 : 2); }

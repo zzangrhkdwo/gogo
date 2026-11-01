@@ -3,11 +3,12 @@
  *  ※ 숫자를 고치면 바로 게임에 반영됩니다. 밸런스 조정은 이 파일에서 합니다.
  *
  *  세계 구조 (총 99칸: 마을 9 + 사냥터 90)
- *    마을1 → 사냥터 1~10 → 마을2 → 사냥터 11~20 → … → 마을9(불꽃왕성) → 사냥터 81~90
+ *    마을1 → 사냥터 1~10 → 마을2 → 사냥터 11~20 → … → 마을9(도원수 진영) → 사냥터 81~90
  *    · 마을 1~8 은 10레벨씩: 사냥터 권장 레벨 1씩 (마을1 = Lv.1~10, 마을2 = Lv.11~20 … 마을8 = Lv.71~80)
  *    · 마을 9 는 80 → 100: 사냥터 권장 레벨 2씩 (Lv.82 … Lv.100)
  *    · 만렙 100
- *    · 마을마다: 포션 가게 · 마법 학교(마법 사기·융합) · 이장 집(귀환 장소 · 마을/사냥터 이동)
+ *    · 마을마다: 약방(포션) · 도술 서원(마법 사기·융합) · 이장 댁(귀환 장소 · 마을/사냥터 이동)
+ *    · v47 임진왜란 분위기: 마을·사냥터 이름을 조선풍으로, 몬스터에 왜군·조선 요괴(도트)를 섞음, 건물은 Skillcom 원본 Meshy 3D(관아·문루·정자)를 찍은 그림
  *    · 마지막 마을(9)에는 성 (나중에 퀘스트를 나눠 주는 곳 · 지금은 '준비 중')
  *
  *  ※ 마법(SKILLS · FUSION)은 skillcom(마법 융합 RPG)의 마법을 받기 전 '임시' 목록입니다.
@@ -21,24 +22,24 @@
    *  lv: [이 지역 사냥터 권장 레벨 시작, 끝] — 마을 1~8 은 10레벨씩(사냥터마다 +1), 마을 9 는 80→100(사냥터마다 +2)
    *  ground: 땅 색 2가지, block·block2: 장애물 종류, deco: 꽃·풀 색 */
   const REGIONS = [
-    { name: '새싹 마을', short: '새싹', ground: ['#7CC66A', '#6DB85C'], path: '#D8C08A', block: 'tree', block2: 'rock', deco: ['#FFE45C', '#FF8AB0', '#FFFFFF'], water: '#4FA8E8', sky: '#BFE6FB',
-      fields: ['햇살 풀밭', '토끼 언덕', '민들레 들판', '시냇가', '버섯 숲길', '나무꾼 오두막터', '이끼 동굴 입구', '바람개비 언덕', '오래된 다리', '거대 슬라임 둥지'] },
-    { name: '바람숲 마을', short: '바람숲', ground: ['#4E9E58', '#438F4D'], path: '#B99A66', block: 'pine', block2: 'rock', deco: ['#B8F28A', '#FFD23F', '#9AE6FF'], water: '#3A8FD0', sky: '#A9DCC0',
-      fields: ['깊은 숲 입구', '덩굴 오솔길', '반딧불 연못', '부엉이 나무', '안개 골짜기', '사냥꾼 야영지', '쓰러진 고목', '거미줄 숲', '바람 정령 제단', '숲의 수호자'] },
-    { name: '안개늪 마을', short: '안개늪', ground: ['#5E7A4A', '#55703F'], path: '#8A7A55', block: 'deadtree', block2: 'mossrock', deco: ['#C8E08A', '#9AD8C0', '#E8D8FF'], water: '#4A7A6A', sky: '#B8C8B0',
-      fields: ['젖은 갈대밭', '개구리 연못', '썩은 나무다리', '반딧불 늪', '안개 낀 수렁', '마녀의 오두막터', '거머리 웅덩이', '뿌리 동굴', '늪지기 무덤', '늪의 여왕 둥지'] },
-    { name: '모래언덕 마을', short: '모래', ground: ['#E8C878', '#DDB866'], path: '#C9A05A', block: 'cactus', block2: 'sandrock', deco: ['#B5842F', '#F5E2A8', '#7FB24A'], water: '#3BB0C9', sky: '#FBE6B8',
-      fields: ['뜨거운 모래밭', '선인장 길', '오아시스', '해골 협곡', '모래 폭풍 길', '무너진 신전', '전갈 굴', '바람 깎인 바위', '사막 피라미드', '모래 왕의 무덤'] },
-    { name: '바위산 마을', short: '바위산', ground: ['#A8957A', '#9C8A70'], path: '#C8B48E', block: 'pine', block2: 'rock', deco: ['#E8E0C8', '#8AB86A', '#FFD23F'], water: '#5A9AD0', sky: '#D8D0C0',
-      fields: ['자갈 고갯길', '광부의 길', '낙석 지대', '독수리 절벽', '버려진 광산', '동굴 박쥐 굴', '바위 거인 발자국', '구름다리', '용암 틈새', '바위산의 왕'] },
-    { name: '얼음고개 마을', short: '얼음', ground: ['#E8F2FB', '#D6E6F5'], path: '#B9CCE0', block: 'snowpine', block2: 'ice', deco: ['#FFFFFF', '#9FD8F5', '#C8B8FF'], water: '#6FC3F0', sky: '#D8ECFF',
-      fields: ['눈 덮인 길', '얼어붙은 호수', '고드름 동굴', '설인 발자국', '눈보라 고개', '얼음 성벽 터', '눈꽃 숲', '빙하 틈', '오로라 언덕', '얼음 여왕의 홀'] },
-    { name: '수정동굴 마을', short: '수정', ground: ['#4A3E6A', '#423760'], path: '#6E6090', block: 'crystal', block2: 'rock', deco: ['#C8A8FF', '#7FE0F0', '#FF9AE0'], water: '#5A4AB0', sky: '#2A2440',
-      fields: ['반짝이는 입구', '보라 수정길', '메아리 동굴', '지하 호수', '빛나는 버섯밭', '수정 광맥', '거꾸로 탑', '그림자 통로', '수정 심장부', '수정 골렘의 방'] },
-    { name: '하늘섬 마을', short: '하늘섬', ground: ['#9EE0A8', '#90D49A'], path: '#F0E6D0', block: 'blossom', block2: 'cloudrock', deco: ['#FFFFFF', '#FFB3D1', '#FFE45C'], water: '#8AD0FF', sky: '#CFEFFF',
-      fields: ['구름 계단', '벚꽃 섬', '무지개 다리', '바람의 신전', '떠다니는 정원', '천둥 구름길', '깃털 둥지', '별빛 전망대', '하늘 성벽', '폭풍 거인'] },
-    { name: '불꽃왕성', short: '왕성', ground: ['#5A4A4A', '#4E3F3F'], path: '#8A6A5A', block: 'lavarock', block2: 'deadtree', deco: ['#FF6A3D', '#FFB13D', '#8A2B2B'], water: '#FF5A2A', sky: '#3A2430', castle: true,
-      fields: ['재 날리는 길', '용암 강가', '불꽃 화산 입구', '검은 바위 숲', '마그마 동굴', '타오르는 성벽', '용의 둥지', '어둠의 제단', '마왕성 정문', '마왕의 왕좌'] }
+    { name: '솔뫼 마을', short: '솔뫼', ground: ['#7CC66A', '#6DB85C'], path: '#D8C08A', block: 'tree', block2: 'rock', deco: ['#FFE45C', '#FF8AB0', '#FFFFFF'], water: '#4FA8E8', sky: '#BFE6FB',
+      fields: ['보리밭 들판', '토끼 언덕', '민들레 둑길', '개울 빨래터', '버섯 솔숲', '숯막 터', '이끼 굴 어귀', '장승 고개', '돌다리 밑', '큰 슬라임 둥지'] },
+    { name: '대숲 마을', short: '대숲', ground: ['#4E9E58', '#438F4D'], path: '#B99A66', block: 'pine', block2: 'rock', deco: ['#B8F28A', '#FFD23F', '#9AE6FF'], water: '#3A8FD0', sky: '#A9DCC0',
+      fields: ['대숲 입구', '덩굴 오솔길', '반딧불 연못', '부엉이 고목', '여우 골짜기', '사냥꾼 움막', '쓰러진 고목', '왜군 척후 진지', '서낭당 터', '숲의 수호자'] },
+    { name: '갈대늪 나루', short: '나루', ground: ['#5E7A4A', '#55703F'], path: '#8A7A55', block: 'deadtree', block2: 'mossrock', deco: ['#C8E08A', '#9AD8C0', '#E8D8FF'], water: '#4A7A6A', sky: '#B8C8B0',
+      fields: ['젖은 갈대밭', '개구리 연못', '썩은 나무다리', '도깨비불 늪', '안개 낀 수렁', '무당집 터', '거머리 웅덩이', '뿌리 동굴', '버려진 나루터', '늪의 여왕 둥지'] },
+    { name: '모래톱 포구', short: '포구', ground: ['#E8C878', '#DDB866'], path: '#C9A05A', block: 'cactus', block2: 'sandrock', deco: ['#B5842F', '#F5E2A8', '#7FB24A'], water: '#3BB0C9', sky: '#FBE6B8',
+      fields: ['뜨거운 모래톱', '갯바위 길', '소금밭', '해골 협곡', '왜선 상륙지', '무너진 봉수대', '전갈 굴', '바람 깎인 바위', '왜군 해안 진지', '모래 왕의 무덤'] },
+    { name: '돌산성 마을', short: '산성', ground: ['#A8957A', '#9C8A70'], path: '#C8B48E', block: 'pine', block2: 'rock', deco: ['#E8E0C8', '#8AB86A', '#FFD23F'], water: '#5A9AD0', sky: '#D8D0C0',
+      fields: ['자갈 고갯길', '광부의 길', '낙석 지대', '독수리 절벽', '버려진 광산', '산성 남문', '동굴 거미 굴', '바위 정령 터', '용암 틈새', '바위산의 왕'] },
+    { name: '눈고개 진영', short: '눈고개', ground: ['#E8F2FB', '#D6E6F5'], path: '#B9CCE0', block: 'snowpine', block2: 'ice', deco: ['#FFFFFF', '#9FD8F5', '#C8B8FF'], water: '#6FC3F0', sky: '#D8ECFF',
+      fields: ['눈 덮인 길', '얼어붙은 강', '고드름 동굴', '설인 발자국', '눈보라 고개', '얼음 성벽 터', '왜군 겨울 진지', '빙하 틈', '오로라 언덕', '얼음 여왕의 홀'] },
+    { name: '용굴 마을', short: '용굴', ground: ['#4A3E6A', '#423760'], path: '#6E6090', block: 'crystal', block2: 'rock', deco: ['#C8A8FF', '#7FE0F0', '#FF9AE0'], water: '#5A4AB0', sky: '#2A2440',
+      fields: ['반짝이는 굴 입구', '보라 수정길', '메아리 동굴', '지하 호수', '여우 굴', '수정 광맥', '왜군 첩자 은신처', '그림자 통로', '수정 심장부', '수정 골렘의 방'] },
+    { name: '구름절 마을', short: '구름절', ground: ['#9EE0A8', '#90D49A'], path: '#F0E6D0', block: 'blossom', block2: 'cloudrock', deco: ['#FFFFFF', '#FFB3D1', '#FFE45C'], water: '#8AD0FF', sky: '#CFEFFF',
+      fields: ['구름 계단', '벚꽃 절터', '무지개 다리', '바람의 법당', '떠다니는 정원', '천둥 구름길', '깃털 둥지', '별빛 전망대', '왜장 본진', '폭풍 거인'] },
+    { name: '도원수 진영', short: '진영', ground: ['#5A4A4A', '#4E3F3F'], path: '#8A6A5A', block: 'lavarock', block2: 'deadtree', deco: ['#FF6A3D', '#FFB13D', '#8A2B2B'], water: '#FF5A2A', sky: '#3A2430', castle: true,
+      fields: ['재 날리는 길', '불타는 강가', '화산 어귀', '검은 바위 숲', '마그마 동굴', '불타는 왜성 외벽', '용의 둥지', '어둠의 제단', '왜성 정문', '흑룡의 왕좌'] }
   ];
   // 사냥터 권장 레벨: 지역 ri 의 k번째(0~9) 사냥터
   const recOf = (ri, k) => (ri < 8 ? ri * 10 + k + 1 : 80 + (k + 1) * 2);
@@ -177,6 +178,73 @@
       '...kbaabk...',
       '..kbk..kbk..',
       '..kk....kk..'],
+    // ── v47 임진왜란: 왜군 (삿갓 · 갑옷) · 조선 요괴 (구미호 · 장승) — Meshy 그림 없이 도트로 그림 ──
+    //    d = 삿갓·투구색, c = 얼굴, a = 갑옷, b = 바지, e = 창끝·눈
+    ashigaru: [
+      '....kkkk...e',
+      '..kkddddkk.e',
+      'kkddddddddkb',
+      '..kccccck..b',
+      '..kckcckk..b',
+      '...kcccck..b',
+      '..kaaaaaakkb',
+      '.kaadaadaacb',
+      '.kaaaaaaak.b',
+      '..kbbbbbk..b',
+      '..kbk.kbk..b',
+      '..kk...kk...'],
+    gunner: [
+      '....kkkk....',
+      '..kkddddkk..',
+      'kkddddddddkk',
+      '..kccccck...',
+      '..kckcckk...',
+      '...kcccck...',
+      '..kaaaaaak..',
+      '.kaaaaacbbbb',
+      '.kaadaadak..',
+      '..kbbbbbk...',
+      '..kbk.kbk...',
+      '..kk...kk...'],
+    samurai: [
+      'e..kkkkkk..e',
+      'ek.kddddk.ke',
+      '.kkddddddkk.',
+      'kddkcccckddk',
+      '.k.kckkck.k.',
+      '...kcccck...',
+      '.kkaaaaaakk.',
+      'kdaaadaaaadk',
+      'kaaaaaaaaaak',
+      '.kdbbbbbbdk.',
+      '..kbbk.kbbk.',
+      '..kkk..kkk..'],
+    gumiho: [
+      '.kk....kk.kk',
+      'kaak..kaakdk',
+      'kaakkkkaakdk',
+      '.kaaaaaaakdk',
+      '.kaeaaaeakdk',
+      '.kaaacaaakdk',
+      '..kaccccakk.',
+      '..kaaaaaak..',
+      '.kaacaacaak.',
+      '.kaacaacaak.',
+      '.kbbk..kbbk.',
+      '.kkk....kkk.'],
+    jangseung: [
+      '...kkkkkk...',
+      '..kddddddk..',
+      '..kddddddk..',
+      '.kkaaaaaakk.',
+      '.kaekaaekak.',
+      '.kaaaccaaak.',
+      '.kaaccccaak.',
+      '.kakkkkkkak.',
+      '.kaekeekeak.',
+      '..kaaaaaak..',
+      '..kbbbbbbk..',
+      '..kkkkkkkk..'],
     dragon: [
       '.k........k.',
       'kak..kk..kak',
@@ -195,35 +263,27 @@
   // 지역별 몬스터 10종: [이름, 모양, 몸색, 진한색, 밝은색, 무늬색, 성질]
   //  성질: 'calm' = 먼저 공격하지 않음, 'aggro' = 가까이 가면 달려옴, 'shoot' = 멀리서 쏨
   const MON = [
-    [['초록 슬라임', 'slime', '#6BD86B', '#3E9E45', '#C8F7B8', '#FFFFFF', 'calm'], ['아기 토끼버섯', 'mushroom', '#FF8A8A', '#C94F4F', '#FFF1E0', '#FFFFFF', 'calm'], ['노랑 꽃잎몬', 'plant', '#FFD23F', '#C99A1A', '#FFF3A8', '#FF7EB6', 'calm'], ['물방울 슬라임', 'slime', '#5AB8F5', '#2F7FC0', '#CDEBFF', '#FFFFFF', 'calm'], ['보라 독버섯', 'mushroom', '#A66BFF', '#6F3FC0', '#F0E6FF', '#FFE45C', 'aggro'],
-     ['들쥐 무리', 'beast', '#B08A6A', '#7A5A42', '#E8D2BC', '#FFB3C7', 'aggro'], ['동굴 박쥐', 'bat', '#6A6A8A', '#44445E', '#B8B8D8', '#FF5A5F', 'aggro'], ['바람개비 정령', 'ghost', '#E8F4FF', '#A8C0E0', '#FFFFFF', '#5AB8F5', 'shoot'], ['다리 밑 도깨비', 'imp', '#6BA86B', '#3E6B3E', '#B8E0B8', '#FFD23F', 'aggro'], ['거대 슬라임 왕', 'slime', '#3ED87A', '#1E8A48', '#B8F7D0', '#FFD23F', 'boss']],
-    [['숲 늑대', 'beast', '#8A8A9A', '#5A5A6A', '#D0D0DC', '#FFFFFF', 'aggro'], ['덩굴 식물', 'plant', '#5AC85A', '#2E8A3A', '#B8F0A8', '#FF5A5F', 'shoot'], ['반딧불 정령', 'ghost', '#E8FF8A', '#A8C040', '#FFFFE0', '#5AE88A', 'shoot'], ['부엉이 박쥐', 'bat', '#8A6A4A', '#5A4230', '#D8C0A0', '#FFD23F', 'aggro'], ['안개 유령', 'ghost', '#C8D0E8', '#8890B0', '#F0F4FF', '#6A70A0', 'aggro'],
-     ['사냥꾼 해골', 'skeleton', '#E8E4D8', '#A8A090', '#FFFFFF', '#8A5A3A', 'shoot'], ['고목 골렘', 'golem', '#8A6A42', '#5A4228', '#C8A878', '#5AC85A', 'aggro'], ['독거미', 'scorpion', '#4A3A5A', '#2A1E36', '#8A78A0', '#FF5A5F', 'aggro'], ['바람 정령', 'imp', '#9AE6FF', '#5AA8D0', '#E0F8FF', '#FFFFFF', 'shoot'], ['숲의 수호 골렘', 'golem', '#4E9E58', '#2E6A36', '#9AD8A0', '#FFD23F', 'boss']],
-    [['늪 슬라임', 'slime', '#7A9A5A', '#4E6A36', '#C8E0A8', '#FFFFFF', 'aggro'], ['개구리 버섯', 'mushroom', '#5AC88A', '#2E8A5A', '#E0FFE8', '#FFE45C', 'calm'], ['늪 덩굴', 'plant', '#6A8A3A', '#3E5A1E', '#B8D08A', '#FF7EB6', 'shoot'], ['도깨비불', 'ghost', '#9AFFD8', '#4AC8A0', '#E8FFF8', '#3E6BFF', 'shoot'], ['진흙 들개', 'beast', '#7A6A4A', '#4E4230', '#C8B898', '#9AD8C0', 'aggro'],
-     ['마녀 박쥐', 'bat', '#5A3A6A', '#36204E', '#A880C0', '#9AFF8A', 'aggro'], ['거머리 벌레', 'scorpion', '#4A5A3A', '#2A361E', '#8AA070', '#FF5A5F', 'aggro'], ['뿌리 골렘', 'golem', '#6A5A3A', '#423820', '#A89870', '#5AC85A', 'aggro'], ['늪지기 해골', 'skeleton', '#D8E0C8', '#98A088', '#FFFFFF', '#5AC88A', 'shoot'], ['늪의 여왕 슬라임', 'slime', '#4ED8A0', '#1E8A60', '#C8FFE8', '#C8A8FF', 'boss']],
-    [['모래 슬라임', 'slime', '#E8B860', '#B08030', '#FFF0C8', '#FFFFFF', 'aggro'], ['선인장 몬', 'plant', '#5AA84A', '#2E7A2A', '#A8E08A', '#FF7EB6', 'shoot'], ['오아시스 정령', 'ghost', '#5AE0E0', '#2EA0A8', '#D0FFFF', '#FFFFFF', 'shoot'], ['협곡 해골', 'skeleton', '#F0E8D0', '#B0A080', '#FFFFFF', '#D2343A', 'aggro'], ['모래 늑대', 'beast', '#D8A860', '#A07838', '#F5DCA8', '#5A3A20', 'aggro'],
-     ['신전 골렘', 'golem', '#C8A060', '#8A6A38', '#F0D8A0', '#3BC8F5', 'aggro'], ['사막 전갈', 'scorpion', '#C86A3A', '#8A4220', '#F0A878', '#FFD23F', 'aggro'], ['모래 도깨비', 'imp', '#D89A5A', '#A06A32', '#F5D0A0', '#3BC8F5', 'shoot'], ['미라 해골', 'skeleton', '#E0D8B8', '#A89870', '#FFFFF0', '#7E4DE0', 'aggro'], ['모래 왕 전갈', 'scorpion', '#FFD23F', '#B08A1A', '#FFF3A8', '#D2343A', 'boss']],
-    [['자갈 슬라임', 'slime', '#A8A098', '#706860', '#E0D8D0', '#FFFFFF', 'aggro'], ['광부 도깨비', 'imp', '#C89A6A', '#8A6A42', '#F0D0A8', '#FFD23F', 'shoot'], ['바위 거북', 'golem', '#8A8A7A', '#5A5A4E', '#C8C8B8', '#7FB24A', 'calm'], ['절벽 독수리', 'bat', '#8A6A4A', '#5A4230', '#E8D8C0', '#FFD23F', 'aggro'], ['산양', 'beast', '#E8E0D0', '#A8A090', '#FFFFFF', '#8A6A4A', 'aggro'],
-     ['광산 해골', 'skeleton', '#E0D8C8', '#A09888', '#FFFFFF', '#FF9A3D', 'shoot'], ['동굴 거미', 'scorpion', '#5A4A3A', '#36281E', '#9A8A78', '#FF5A5F', 'aggro'], ['바위 정령', 'ghost', '#B8B0A0', '#7A7268', '#E8E4DC', '#FF9A3D', 'shoot'], ['용암 도마뱀', 'dragon', '#C8602A', '#8A3A18', '#F0A070', '#FFD23F', 'aggro'], ['바위산 거인', 'golem', '#7A7068', '#4A4440', '#B8B0A8', '#FF6A3D', 'boss']],
-    [['눈 슬라임', 'slime', '#E8F4FF', '#A8C8E8', '#FFFFFF', '#5AB8F5', 'aggro'], ['얼음 박쥐', 'bat', '#8AC8F0', '#4A88C0', '#D8F0FF', '#FFFFFF', 'aggro'], ['고드름 정령', 'ghost', '#B8E8FF', '#6AA8D8', '#FFFFFF', '#3E6BFF', 'shoot'], ['설인', 'beast', '#F0F4FF', '#B0B8D0', '#FFFFFF', '#5AB8F5', 'aggro'], ['눈보라 도깨비', 'imp', '#C8D8F0', '#8898C0', '#F0F4FF', '#3BC8F5', 'shoot'],
-     ['얼음 골렘', 'golem', '#8AD0F0', '#4A90C0', '#D8F4FF', '#FFFFFF', 'aggro'], ['수정 해골', 'skeleton', '#D8C8FF', '#9A88D0', '#FFFFFF', '#3BC8F5', 'shoot'], ['빙하 전갈', 'scorpion', '#6AB0E0', '#3A70A8', '#C8E8FF', '#FFFFFF', 'aggro'], ['오로라 유령', 'ghost', '#B8FFD8', '#6AC8A0', '#F0FFF8', '#C8A8FF', 'shoot'], ['얼음 여왕 골렘', 'golem', '#C8F0FF', '#6AA8D8', '#FFFFFF', '#7E4DE0', 'boss']],
-    [['수정 슬라임', 'slime', '#C8A8FF', '#8A6AD0', '#F0E8FF', '#FFFFFF', 'aggro'], ['빛 버섯', 'mushroom', '#7FE0F0', '#3EA0B8', '#E0FAFF', '#FF9AE0', 'calm'], ['메아리 박쥐', 'bat', '#6A5AA0', '#40367A', '#B0A8E0', '#7FE0F0', 'aggro'], ['지하 호수 정령', 'ghost', '#8AB8FF', '#4A78D0', '#E0ECFF', '#FFFFFF', 'shoot'], ['수정 늑대', 'beast', '#A8B8F0', '#6878C0', '#E8F0FF', '#C8A8FF', 'aggro'],
-     ['보석 전갈', 'scorpion', '#FF9AE0', '#C05AA8', '#FFE0F5', '#7FE0F0', 'aggro'], ['그림자 도깨비', 'imp', '#3A3060', '#201A3E', '#7A70A8', '#FF9AE0', 'shoot'], ['수정 해골', 'skeleton', '#E0D8FF', '#A098D0', '#FFFFFF', '#7FE0F0', 'shoot'], ['자수정 용', 'dragon', '#9A6AE0', '#5E3AA0', '#D8C0FF', '#7FE0F0', 'aggro'], ['수정 골렘 왕', 'golem', '#B8A0FF', '#7058C8', '#F0E8FF', '#7FE0F0', 'boss']],
-    [['구름 슬라임', 'slime', '#F3F6FF', '#B8C4E0', '#FFFFFF', '#8AD0FF', 'calm'], ['벚꽃 정령', 'plant', '#FFB3D1', '#D07098', '#FFE8F2', '#FFFFFF', 'shoot'], ['무지개 박쥐', 'bat', '#8AD0FF', '#4A90C8', '#E0F4FF', '#FFE45C', 'aggro'], ['바람 신관 해골', 'skeleton', '#F0F0E8', '#B0B0A8', '#FFFFFF', '#7FE0C4', 'shoot'], ['하늘 여우', 'beast', '#FFD8A8', '#D0A070', '#FFF4E0', '#FF7EB6', 'aggro'],
-     ['천둥 도깨비', 'imp', '#FFE45C', '#C8A82A', '#FFF8C0', '#4C7DFF', 'shoot'], ['깃털 그리핀', 'dragon', '#E8D0A0', '#A8905A', '#FFF4D8', '#FFFFFF', 'aggro'], ['별빛 유령', 'ghost', '#D8E0FF', '#9098D0', '#FFFFFF', '#FFE45C', 'shoot'], ['하늘 성벽 골렘', 'golem', '#D8E0F0', '#98A0B8', '#FFFFFF', '#8AD0FF', 'aggro'], ['폭풍 거인', 'golem', '#7A8AB0', '#465478', '#C0CCE8', '#FFE45C', 'boss']],
-    [['불씨 슬라임', 'slime', '#FF7A3D', '#C8481E', '#FFD0A8', '#FFE45C', 'aggro'], ['용암 박쥐', 'bat', '#8A2B2B', '#5A1A1A', '#E06A5A', '#FFB13D', 'aggro'], ['불꽃 정령', 'ghost', '#FFB13D', '#E0661E', '#FFF0C0', '#FF3D2A', 'shoot'], ['검은 늑대', 'beast', '#3A3040', '#201A26', '#7A6A80', '#FF3D2A', 'aggro'], ['마그마 골렘', 'golem', '#6A3A2A', '#3A1E14', '#E0661E', '#FFD23F', 'aggro'],
-     ['불타는 해골', 'skeleton', '#E8D8C8', '#A08878', '#FFFFFF', '#FF5A2A', 'shoot'], ['새끼 용', 'dragon', '#D2343A', '#8A1E22', '#FF8A80', '#FFD23F', 'aggro'], ['어둠 도깨비', 'imp', '#5A3A7A', '#36204E', '#A880D0', '#FF3D2A', 'shoot'], ['마왕성 수문장', 'golem', '#4A4A5A', '#26262E', '#9A9AB0', '#FF3D2A', 'aggro'], ['마왕 용', 'dragon', '#3A1E4A', '#1E0E28', '#8A5AB0', '#FF3D2A', 'boss']]
+    [['초록 슬라임', 'slime', '#6BD86B', '#3E9E45', '#C8F7B8', '#FFFFFF', 'calm'], ['아기 토끼버섯', 'mushroom', '#FF8A8A', '#C94F4F', '#FFF1E0', '#FFFFFF', 'calm'], ['노랑 꽃잎몬', 'plant', '#FFD23F', '#C99A1A', '#FFF3A8', '#FF7EB6', 'calm'], ['왜군 척후병', 'ashigaru', '#8A3A2A', '#4A2A20', '#F0C8A0', '#5A5A62', 'aggro'], ['보라 독버섯', 'mushroom', '#A66BFF', '#6F3FC0', '#F0E6FF', '#FFE45C', 'aggro'], ['들쥐 무리', 'beast', '#B08A6A', '#7A5A42', '#E8D2BC', '#FFB3C7', 'aggro'], ['동굴 박쥐', 'bat', '#6A6A8A', '#44445E', '#B8B8D8', '#FF5A5F', 'aggro'], ['장승 요괴', 'jangseung', '#B08A5A', '#6A4A2A', '#D8B080', '#2A2A2A', 'calm'], ['다리 밑 도깨비', 'imp', '#6BA86B', '#3E6B3E', '#B8E0B8', '#FFD23F', 'aggro'], ['거대 슬라임 왕', 'slime', '#3ED87A', '#1E8A48', '#B8F7D0', '#FFD23F', 'boss']],
+    [['숲 늑대', 'beast', '#8A8A9A', '#5A5A6A', '#D0D0DC', '#FFFFFF', 'aggro'], ['덩굴 식물', 'plant', '#5AC85A', '#2E8A3A', '#B8F0A8', '#FF5A5F', 'shoot'], ['반딧불 정령', 'ghost', '#E8FF8A', '#A8C040', '#FFFFE0', '#5AE88A', 'shoot'], ['부엉이 박쥐', 'bat', '#8A6A4A', '#5A4230', '#D8C0A0', '#FFD23F', 'aggro'], ['구미호', 'gumiho', '#F0E8E0', '#B8A8A0', '#FFFFFF', '#FF8A3D', 'aggro'], ['왜군 조총병', 'gunner', '#8A3A2A', '#4A2A20', '#F0C8A0', '#5A5A62', 'shoot'], ['고목 골렘', 'golem', '#8A6A42', '#5A4228', '#C8A878', '#5AC85A', 'aggro'], ['왜군 창병', 'ashigaru', '#8A3A2A', '#4A2A20', '#F0C8A0', '#5A5A62', 'aggro'], ['바람 정령', 'imp', '#9AE6FF', '#5AA8D0', '#E0F8FF', '#FFFFFF', 'shoot'], ['숲의 수호 골렘', 'golem', '#4E9E58', '#2E6A36', '#9AD8A0', '#FFD23F', 'boss']],
+    [['늪 슬라임', 'slime', '#7A9A5A', '#4E6A36', '#C8E0A8', '#FFFFFF', 'aggro'], ['왜군 척후대', 'ashigaru', '#3A4260', '#22283E', '#F0C8A0', '#4A4A52', 'aggro'], ['늪 덩굴', 'plant', '#6A8A3A', '#3E5A1E', '#B8D08A', '#FF7EB6', 'shoot'], ['도깨비불', 'ghost', '#9AFFD8', '#4AC8A0', '#E8FFF8', '#3E6BFF', 'shoot'], ['진흙 들개', 'beast', '#7A6A4A', '#4E4230', '#C8B898', '#9AD8C0', 'aggro'], ['잿빛 여우 요괴', 'gumiho', '#9A9AA8', '#5E5E6E', '#E0E0E8', '#9AFFD8', 'aggro'], ['거머리 벌레', 'scorpion', '#4A5A3A', '#2A361E', '#8AA070', '#FF5A5F', 'aggro'], ['뿌리 골렘', 'golem', '#6A5A3A', '#423820', '#A89870', '#5AC85A', 'aggro'], ['왜군 조총병', 'gunner', '#3A4260', '#22283E', '#F0C8A0', '#4A4A52', 'shoot'], ['늪의 여왕 슬라임', 'slime', '#4ED8A0', '#1E8A60', '#C8FFE8', '#C8A8FF', 'boss']],
+    [['모래 슬라임', 'slime', '#E8B860', '#B08030', '#FFF0C8', '#FFFFFF', 'aggro'], ['왜군 상륙병', 'ashigaru', '#8A3A2A', '#4A2A20', '#F0C8A0', '#5A5A62', 'aggro'], ['바닷가 장승', 'jangseung', '#A07850', '#5A3E22', '#D0A878', '#2A2A2A', 'shoot'], ['협곡 해골', 'skeleton', '#F0E8D0', '#B0A080', '#FFFFFF', '#D2343A', 'aggro'], ['모래 늑대', 'beast', '#D8A860', '#A07838', '#F5DCA8', '#5A3A20', 'aggro'], ['왜군 조총수', 'gunner', '#8A3A2A', '#4A2A20', '#F0C8A0', '#5A5A62', 'shoot'], ['사막 전갈', 'scorpion', '#C86A3A', '#8A4220', '#F0A878', '#FFD23F', 'aggro'], ['모래 도깨비', 'imp', '#D89A5A', '#A06A32', '#F5D0A0', '#3BC8F5', 'shoot'], ['미라 해골', 'skeleton', '#E0D8B8', '#A89870', '#FFFFF0', '#7E4DE0', 'aggro'], ['모래 왕 전갈', 'scorpion', '#FFD23F', '#B08A1A', '#FFF3A8', '#D2343A', 'boss']],
+    [['자갈 슬라임', 'slime', '#A8A098', '#706860', '#E0D8D0', '#FFFFFF', 'aggro'], ['광부 도깨비', 'imp', '#C89A6A', '#8A6A42', '#F0D0A8', '#FFD23F', 'shoot'], ['산성 장승', 'jangseung', '#8A7A6A', '#5A4E42', '#C8B8A8', '#2A2A2A', 'calm'], ['절벽 독수리', 'bat', '#8A6A4A', '#5A4230', '#E8D8C0', '#FFD23F', 'aggro'], ['산양', 'beast', '#E8E0D0', '#A8A090', '#FFFFFF', '#8A6A4A', 'aggro'], ['왜군 조총대', 'gunner', '#3A4260', '#22283E', '#F0C8A0', '#4A4A52', 'shoot'], ['동굴 거미', 'scorpion', '#5A4A3A', '#36281E', '#9A8A78', '#FF5A5F', 'aggro'], ['왜군 돌격대', 'ashigaru', '#3A4260', '#22283E', '#F0C8A0', '#4A4A52', 'aggro'], ['용암 도마뱀', 'dragon', '#C8602A', '#8A3A18', '#F0A070', '#FFD23F', 'aggro'], ['바위산 거인', 'golem', '#7A7068', '#4A4440', '#B8B0A8', '#FF6A3D', 'boss']],
+    [['눈 슬라임', 'slime', '#E8F4FF', '#A8C8E8', '#FFFFFF', '#5AB8F5', 'aggro'], ['얼음 박쥐', 'bat', '#8AC8F0', '#4A88C0', '#D8F0FF', '#FFFFFF', 'aggro'], ['고드름 정령', 'ghost', '#B8E8FF', '#6AA8D8', '#FFFFFF', '#3E6BFF', 'shoot'], ['설산 구미호', 'gumiho', '#F4F8FF', '#A8C0E0', '#FFFFFF', '#5AB8F5', 'aggro'], ['눈보라 도깨비', 'imp', '#C8D8F0', '#8898C0', '#F0F4FF', '#3BC8F5', 'shoot'], ['얼음 골렘', 'golem', '#8AD0F0', '#4A90C0', '#D8F4FF', '#FFFFFF', 'aggro'], ['왜군 조총병', 'gunner', '#5A6A8A', '#344058', '#F0C8A0', '#4A4A52', 'shoot'], ['빙하 전갈', 'scorpion', '#6AB0E0', '#3A70A8', '#C8E8FF', '#FFFFFF', 'aggro'], ['왜장 무사', 'samurai', '#6A6A80', '#3A3A4E', '#F0C8A0', '#D2343A', 'aggro'], ['얼음 여왕 골렘', 'golem', '#C8F0FF', '#6AA8D8', '#FFFFFF', '#7E4DE0', 'boss']],
+    [['수정 슬라임', 'slime', '#C8A8FF', '#8A6AD0', '#F0E8FF', '#FFFFFF', 'aggro'], ['빛 버섯', 'mushroom', '#7FE0F0', '#3EA0B8', '#E0FAFF', '#FF9AE0', 'calm'], ['메아리 박쥐', 'bat', '#6A5AA0', '#40367A', '#B0A8E0', '#7FE0F0', 'aggro'], ['보라 구미호', 'gumiho', '#C8A8FF', '#7A5AC0', '#F0E8FF', '#FF9AE0', 'aggro'], ['수정 늑대', 'beast', '#A8B8F0', '#6878C0', '#E8F0FF', '#C8A8FF', 'aggro'], ['왜군 첩자', 'ashigaru', '#2A2A36', '#16161E', '#F0C8A0', '#5A5A62', 'aggro'], ['그림자 도깨비', 'imp', '#3A3060', '#201A3E', '#7A70A8', '#FF9AE0', 'shoot'], ['왜장 무사', 'samurai', '#4A3A6A', '#2A2040', '#F0C8A0', '#FFD23F', 'aggro'], ['자수정 용', 'dragon', '#9A6AE0', '#5E3AA0', '#D8C0FF', '#7FE0F0', 'aggro'], ['수정 골렘 왕', 'golem', '#B8A0FF', '#7058C8', '#F0E8FF', '#7FE0F0', 'boss']],
+    [['구름 슬라임', 'slime', '#F3F6FF', '#B8C4E0', '#FFFFFF', '#8AD0FF', 'calm'], ['벚꽃 정령', 'plant', '#FFB3D1', '#D07098', '#FFE8F2', '#FFFFFF', 'shoot'], ['무지개 박쥐', 'bat', '#8AD0FF', '#4A90C8', '#E0F4FF', '#FFE45C', 'aggro'], ['왜군 조총대장', 'gunner', '#7A2A2A', '#4A1A1A', '#F0C8A0', '#FFD23F', 'shoot'], ['하늘 구미호', 'gumiho', '#FFD8A8', '#D0A070', '#FFF4E0', '#FF7EB6', 'aggro'], ['천둥 도깨비', 'imp', '#FFE45C', '#C8A82A', '#FFF8C0', '#4C7DFF', 'shoot'], ['깃털 그리핀', 'dragon', '#E8D0A0', '#A8905A', '#FFF4D8', '#FFFFFF', 'aggro'], ['별빛 유령', 'ghost', '#D8E0FF', '#9098D0', '#FFFFFF', '#FFE45C', 'shoot'], ['왜장 대장', 'samurai', '#8A2B2B', '#4A1414', '#F0C8A0', '#FFD23F', 'aggro'], ['폭풍 거인', 'golem', '#7A8AB0', '#465478', '#C0CCE8', '#FFE45C', 'boss']],
+    [['왜군 정예병', 'ashigaru', '#2A2A36', '#16161E', '#F0C8A0', '#D2343A', 'aggro'], ['용암 박쥐', 'bat', '#8A2B2B', '#5A1A1A', '#E06A5A', '#FFB13D', 'aggro'], ['불꽃 정령', 'ghost', '#FFB13D', '#E0661E', '#FFF0C0', '#FF3D2A', 'shoot'], ['왜군 조총 정예', 'gunner', '#2A2A36', '#16161E', '#F0C8A0', '#D2343A', 'shoot'], ['마그마 골렘', 'golem', '#6A3A2A', '#3A1E14', '#E0661E', '#FFD23F', 'aggro'], ['불타는 해골', 'skeleton', '#E8D8C8', '#A08878', '#FFFFFF', '#FF5A2A', 'shoot'], ['새끼 용', 'dragon', '#D2343A', '#8A1E22', '#FF8A80', '#FFD23F', 'aggro'], ['어둠 도깨비', 'imp', '#5A3A7A', '#36204E', '#A880D0', '#FF3D2A', 'shoot'], ['왜성 수문장', 'samurai', '#1E1E26', '#0E0E14', '#F0C8A0', '#D2343A', 'aggro'], ['흑룡 이무기', 'dragon', '#3A1E4A', '#1E0E28', '#8A5AB0', '#FF3D2A', 'boss']]
   ];
 
   /* ---------------- 지도 목록 ---------------- */
   // id: 'v1'~'v9' (마을), 'f1'~'f90' (사냥터)
+  const DOT_ONLY = ['ashigaru', 'gunner', 'samurai', 'gumiho', 'jangseung'];   // v47 새 몬스터: Meshy 그림 없이 도트로
   const MAPS = [];
   REGIONS.forEach((R, ri) => {
     MAPS.push({ id: 'v' + (ri + 1), kind: 'village', region: ri, name: R.name, rec: 0 });
     for (let k = 0; k < 10; k++) {
       const n = ri * 10 + k + 1, m = MON[ri][k];
       MAPS.push({ id: 'f' + n, kind: 'field', region: ri, no: n, name: R.fields[k], rec: recOf(ri, k), boss: m[6] === 'boss',
-        mon: { name: m[0], shape: m[1], colors: { a: m[2], b: m[3], c: m[4], d: m[5] }, kind: m[6], ri, k } });   // ri·k = Meshy 그림 칸 (img/mon_r{ri}.png 의 k번째, 보스는 img/boss_r{ri}.png)
+        mon: { name: m[0], shape: m[1], colors: { a: m[2], b: m[3], c: m[4], d: m[5] }, kind: m[6], ri, k, dot: DOT_ONLY.includes(m[1]) } });   // ri·k = Meshy 그림 칸 (img/mon_r{ri}.png 의 k번째, 보스는 img/boss_r{ri}.png)
     }
   });
   MAPS.forEach((m, i) => { m.prev = i > 0 ? MAPS[i - 1].id : null; m.next = i < MAPS.length - 1 ? MAPS[i + 1].id : null; });
@@ -290,7 +350,7 @@
     POTIONS.push({ id: 'hp' + (t + 1), name: HPN[t] + ' 포션', kind: 'hp', amount: hp, price, tier: t, desc: `체력 ${hp} 회복` });
     POTIONS.push({ id: 'mp' + (t + 1), name: MPN[t] + ' 포션', kind: 'mp', amount: mp, price: Math.round(price * 1.2), tier: t, desc: `마나 ${mp} 회복` });
   }
-  POTIONS.push({ id: 'scroll', name: '귀환 주문서', kind: 'scroll', price: 15, tier: 0, desc: '마지막으로 들른 마을의 이장 집 앞으로 돌아가요' });
+  POTIONS.push({ id: 'scroll', name: '귀환 주문서', kind: 'scroll', price: 15, tier: 0, desc: '마지막으로 들른 마을의 이장 댁 앞으로 돌아가요' });
   POTIONS.forEach(p => { ITEMS[p.id] = Object.assign({ slot: null, stack: true }, p); });
 
   /* ---------------- 마법 (임시 · skillcom 연결 후 교체) ----------------
@@ -373,33 +433,33 @@
    *  type: potion(포션 가게) · school(마법 학교) · chief(이장 집) · castle(성, 마지막 마을)
    *  x, y, w, h = 칸 (마을 지도 36 × 22) · door = 문 칸 (건물 아래 가운데) */
   const BUILDINGS = [
-    { type: 'potion', name: '포션 가게', x: 5, y: 4, w: 6, h: 4, roof: '#D2343A' },
-    { type: 'school', name: '마법 학교', x: 25, y: 4, w: 7, h: 4, roof: '#7E4DE0' },
-    { type: 'chief', name: '이장 집', x: 6, y: 13, w: 6, h: 4, roof: '#3E9E58' }
+    { type: 'potion', name: '약방', x: 5, y: 4, w: 6, h: 4, roof: '#D2343A' },
+    { type: 'school', name: '도술 서원', x: 25, y: 4, w: 7, h: 4, roof: '#7E4DE0' },
+    { type: 'chief', name: '이장 댁', x: 6, y: 13, w: 6, h: 4, roof: '#3E9E58' }
   ];
-  const CASTLE = { type: 'castle', name: '성', x: 23, y: 12, w: 10, h: 6, roof: '#5A5A70' };
+  const CASTLE = { type: 'castle', name: '도원수 진영', x: 23, y: 12, w: 10, h: 6, roof: '#5A5A70' };
 
   /* ---------------- 사람(NPC) · v41 ----------------
    *  av = 사이트 아바타 옷 그대로 (avatar/avatar.js 의 아이템 id) → 플레이어와 같은 그림체
    *  hello = 창을 열 때 하는 말 (아무거나 하나) · lines = 근처에 가면 머리 위 말풍선 */
   const NPCS = {
-    potion: { name: '물약 상인 미나', color: '#FF9AA0', av: { skin: 's2', hair: 'h_bun', face: 'f_glasses', top: 't_doctor', bottom: 'b_skirt', shoes: 'sh_red' },
+    potion: { name: '약방 아씨 미나', color: '#FF9AA0', av: { skin: 's2', hair: 'h_bun', face: 'f_glasses', top: 't_doctor', bottom: 'b_skirt', shoes: 'sh_red' },
       hello: ['어서 와요! 오늘 끓인 물약이 아주 잘 됐어요.', '사냥 가기 전에 물약은 넉넉히! 쓰러지면 손해예요.', '안 쓰는 물건은 여기서 팔아도 돼요. 값은 좀 깎이지만요.'] },
-    school: { name: '대마법사 루멘', color: '#D8B8FF', av: { skin: 's1', hair: 'h_long', hat: 'hat_wizard', face: 'f_beard', top: 't_robe', bottom: 'b_ninja', shoes: 'sh_black' },
+    school: { name: '서원 도사 루멘', color: '#D8B8FF', av: { skin: 's1', hair: 'h_long', hat: 'hat_wizard', face: 'f_beard', top: 't_robe', bottom: 'b_ninja', shoes: 'sh_black' },
       hello: ['마법은 원소의 대화란다. 두 원소를 섞으면 새 마법이 태어나지.', '레벨이 오르면 다시 오너라. 더 강한 마법을 가르쳐 주마.', '같은 원소끼리는 섞이지 않는단다. 서로 다른 것이 만나야 새것이 되지.'] },
     chief: { name: '이장님', color: '#9AF0B0', av: { skin: 's3', hair: 'h_topknot', hat: 'hat_gat', face: 'f_mustache', top: 't_hanbok_m', bottom: 'b_hanbok_m', shoes: 'sh_black' },
       hello: ['어서 오게! 여기가 자네의 귀환 장소일세.', '가 본 곳이면 어디든 보내 주지. 이동은 무료라네.', '무리하지 말게. 쓰러지면 이 집 앞에서 다시 깨어날 걸세.'] },
-    castle: { name: '불꽃왕', color: '#FFE45C', av: { skin: 's1', hair: 'h_curly', hat: 'hat_emperor', face: 'f_beard', top: 't_suit', bottom: 'b_armor', shoes: 'sh_gold', back: 'bk_cape' },
-      hello: ['용사여, 잘 왔다. 마왕 용이 깨어나고 있다…', '곧 그대에게 맡길 일이 많을 것이다. 힘을 길러 두어라.'] },
-    guard: { name: '왕성 경비병', color: '#C9D0F0', av: { skin: 's4', hair: 'h_short', hat: 'hat_darkhelm', top: 't_armor', bottom: 'b_armor', shoes: 'sh_black' },
-      lines: ['폐하께 예를 갖추시오.', '왕성은 안전하오.', '용암 지대는 조심하시오!'] }
+    castle: { name: '도원수', color: '#FFE45C', av: { skin: 's1', hair: 'h_curly', hat: 'hat_emperor', face: 'f_beard', top: 't_suit', bottom: 'b_armor', shoes: 'sh_gold', back: 'bk_cape' },
+      hello: ['잘 왔소. 왜성 깊은 곳에서 흑룡 이무기가 깨어나고 있소…', '왜군과 요괴가 한데 엉켜 몰려오고 있소. 힘을 길러 두시오.'] },
+    guard: { name: '진영 파수꾼', color: '#C9D0F0', av: { skin: 's4', hair: 'h_short', hat: 'hat_darkhelm', top: 't_armor', bottom: 'b_armor', shoes: 'sh_black' },
+      lines: ['도원수께 예를 갖추시오.', '진영은 안전하오.', '왜성 쪽 용암 지대는 조심하시오!'] }
   };
   // 마을을 돌아다니는 사람 (마을마다 2명씩 번갈아)
   const VILLAGERS = [
     { name: '꼬마 콩이', av: { skin: 's2', hair: 'h_twin', top: 't_pe', bottom: 'b_shorts', shoes: 'sh_red' }, lines: ['분수 물 진짜 시원해!', '오른쪽 끝으로 가면 사냥터래!', '나도 커서 마법사 될 거야!'] },
-    { name: '나무꾼 아저씨', av: { skin: 's3', hair: 'h_short_brown', hat: 'hat_straw', face: 'f_mustache', top: 't_overall', bottom: 'b_jeans', shoes: 'sh_boots' }, lines: ['숲에 슬라임이 많아졌어.', '포션 가게 물약은 정말 잘 들어.', '이장님 댁에 들르면 멀리 갈 수 있다네.'] },
-    { name: '여행자 하늘', av: { skin: 's1', hair: 'h_ponytail', hat: 'hat_elfhood', top: 't_elf', bottom: 'b_cargo', shoes: 'sh_hightop', back: 'bk_bag2' }, lines: ['다음 마을까지 사냥터가 10개래.', '보스는 꼭 장비를 떨어뜨린대!', '마법 학교에서 융합을 배워 봐.'] },
-    { name: '대장장이 철수', av: { skin: 's4', hair: 'h_spiky', face: 'f_goggles', top: 't_vest', bottom: 'b_cargo', shoes: 'sh_black' }, lines: ['정예 장비는 반짝반짝 빛나지.', '레벨이 모자라면 장비를 못 입어.', '가방이 꽉 차면 포션 가게에서 팔게.'] }
+    { name: '나무꾼 아저씨', av: { skin: 's3', hair: 'h_short_brown', hat: 'hat_straw', face: 'f_mustache', top: 't_overall', bottom: 'b_jeans', shoes: 'sh_boots' }, lines: ['숲에 슬라임이 많아졌어.', '약방 물약은 정말 잘 들어.', '이장님 댁에 들르면 멀리 갈 수 있다네.'] },
+    { name: '여행자 하늘', av: { skin: 's1', hair: 'h_ponytail', hat: 'hat_elfhood', top: 't_elf', bottom: 'b_cargo', shoes: 'sh_hightop', back: 'bk_bag2' }, lines: ['왜군이 사냥터마다 숨어 있대!', '보스는 꼭 장비를 떨어뜨린대!', '도술 서원에서 융합을 배워 봐.'] },
+    { name: '대장장이 철수', av: { skin: 's4', hair: 'h_spiky', face: 'f_goggles', top: 't_vest', bottom: 'b_cargo', shoes: 'sh_black' }, lines: ['정예 장비는 반짝반짝 빛나지.', '레벨이 모자라면 장비를 못 입어.', '가방이 꽉 차면 약방에서 팔게.'] }
   ];
 
   window.GoRPGData = { MAX_LV, REGIONS, recOf, LV_RANGE, SHAPES, MAPS, F, STAT, TIER, SLOT_NAME, ITEMS, POTIONS, ELEM, SKILLS, FUSION, fusionOf, BUILDINGS, CASTLE, NPCS, VILLAGERS };

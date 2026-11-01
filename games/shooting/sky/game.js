@@ -5,6 +5,7 @@
  *  - 스테이지가 올라갈수록 적 총알이 빨라짐 (settings.js 의 bulletBase · bulletStep)
  *  - 총알은 저절로 나감. 빨간(주황) 편대를 모두 잡거나 폭격기를 잡으면 P(파워)·B(폭탄)·★(점수) 아이템
  *  - 폭탄: 화면의 적 총알을 모두 지우고 적에게 큰 피해. 맞으면 목숨 -1, 파워 -1 (잠깐 무적)
+ *  - v46: 비행기·적·보스 15개 = Meshy 3D 를 위에서 찍은 그림(img/). 그림을 못 받으면 예전 도트 그림으로
  *  - 온라인: 방장 기기가 적·총알·점수를 계산해서 보냄(초당 10번). 손님은 자기 비행기를 직접 움직이고,
  *    자기 화면에 보이는 총알에 맞았는지도 직접 판단해서 방장에게 알림 (끊김 때문에 억울하게 맞지 않게)
  */
@@ -48,8 +49,13 @@
   const PLANE = ['.......o', '......ow', '......ob', '.....obc', '.....obc', 'o....obb', 'oo..obbb', 'obooobbb', 'obbbbbbb', 'oooobbbd', '....obbb', '.....obb', '....oobb', '...obbbb', '...ooooo'];
   const SMALL = ['...ooo', '...obb', 'oo.obb', 'obooob', 'obbbbb', 'ooobbc', '...obb', '....ob', '.....o'];
   const BOMBER = ['......ooo', '......obb', 'ooooooobb', 'obbbbbbbb', 'obbdbbbbb', 'ooobbbbbc', '..odo.obb', '..ooo.obb', '......obb', '.......ob', '........o'];
+  /* v46 Meshy 그림 (img/*.png — Meshy 3D 비행기·보스 15개를 위에서 찍어 도트로). 못 불러오면 아래 도트 그림 */
+  const IMGDIR = 'games/shooting/sky/img/', IMGV = 46, IMG = {};
+  function img(n) { let i = IMG[n]; if (!i) { i = IMG[n] = new Image(); i.src = IMGDIR + n + '.png?v=' + IMGV; } return i.complete && i.naturalWidth ? i : null; }
+  ['p0', 'p1', 'small', 'red', 'dive', 'bomber', 'big'].concat([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => 'boss' + n)).forEach(img);   // 미리 받기
   const SPR = {};
   function spr(name) {
+    const mi = img(name); if (mi) return mi;
     if (SPR[name]) return SPR[name];
     const O = '#1D2340';
     const map = {
@@ -180,6 +186,19 @@
     return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
   }
   function drawBoss(ctx, b, def, t, aimAng) {
+    const bi = img('boss' + (STAGES.findIndex(s => s.boss === def) + 1));
+    if (bi) {   // Meshy 보스 그림 + 맞으면 하얗게 번쩍 + 총구
+      const O = '#1D2340', bob = Math.sin(t * 2) * 2;
+      ctx.save(); ctx.translate(Math.round(b.x), Math.round(b.y + bob));
+      ctx.globalAlpha = 0.25; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.ellipse(10, 18, bi.width * 0.42, bi.height * 0.42, 0, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;   // 그림자
+      ctx.drawImage(bi, -Math.round(bi.width / 2), -Math.round(bi.height / 2));
+      if (b.flash > 0) { ctx.globalAlpha = 0.65; ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(bi, -Math.round(bi.width / 2), -Math.round(bi.height / 2)); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; }
+      def.guns.forEach(([gx, gy]) => {
+        ctx.save(); ctx.translate(gx, gy); ctx.rotate(aimAng - Math.PI / 2); ctx.fillStyle = O; ctx.fillRect(-2.5, 0, 5, 15); ctx.restore();
+        ctx.fillStyle = b.flash > 0 ? '#FFFFFF' : '#C8C8D8'; ctx.beginPath(); ctx.arc(gx, gy, 5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = O; ctx.lineWidth = 2; ctx.stroke();
+      });
+      ctx.restore(); return;
+    }
     const c = b.flash > 0 ? '#FFFFFF' : def.color, d = shade(def.color, 0.6), l = shade(def.color, 1.3), O = '#1D2340', hw = def.hw, hh = def.hh;
     ctx.save(); ctx.translate(Math.round(b.x), Math.round(b.y));
     ctx.lineWidth = 3; ctx.strokeStyle = O;

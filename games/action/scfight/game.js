@@ -9,7 +9,8 @@
  *  대결: 1:1 또는 2:2 (컴퓨터와 · 온라인). 2:2 는 같은 편끼리 안 맞음. 한 편이 모두 쓰러지면 끝
  *  온라인: Hub.channel 'scf-lobby'(방 목록) · 'scf-room-<코드>'(1:1 = 2명, 2:2 = 4명. 모자라면 방장이 빈자리를 컴퓨터로 채워 시작)
  *          방장이 'start'(편 나눔) 를 보냄. 각자 자기 몸(방장은 컴퓨터도)의 자리·체력을 보내고, 맞았는지는 맞은 몸을 맡은 기기가 판단
- *  ※ 경기장·컴퓨터 상대는 임시 그림 → Skillcom 원본으로 바꿀 자리: buildArena() · makeEnemyAvatar()
+ *  전장·컴퓨터 (v46): Skillcom 원본 그대로 — 전장 3곳(성벽 위 · 판옥선 갑판 · 관아 앞마당, 판마다 뽑기) · 컴퓨터 = Skillcom 원본 장수 7명(Haesu · Beopsan · Seonbi · Taegang · Kan · Cute · Seacher)
+ *     3D 파일은 assets/ (원본 Godot 파일을 줄임 · 장수 1개 ≈ 1.1MB) · 불러오는 도구 vendor/three-gltf.min.js · 못 불러오면 예전 블록 모양으로
  */
 (function () {
   'use strict';
@@ -90,6 +91,30 @@
   const loadThree = () => threeP || (threeP = window.THREE ? Promise.resolve(window.THREE) : new Promise((res, rej) => {
     const sc = document.createElement('script'); sc.src = DIR + 'vendor/three.min.js?v=149'; sc.onload = () => res(window.THREE); sc.onerror = () => { threeP = null; rej(new Error('three')); }; document.head.appendChild(sc);
   }));
+  /* Skillcom 원본 3D 파일 (Meshy 로 만든 장수 4명 · 전장 소품 · 그림 하늘) — 못 불러오면 예전 블록 모양으로 */
+  const AV_VER = 46;
+  let gltfP = null;
+  const loadGLTF = () => gltfP || (gltfP = loadThree().then(T => T.GLTFLoader ? T : new Promise(res => {
+    const sc = document.createElement('script'); sc.src = DIR + 'vendor/three-gltf.min.js?v=' + AV_VER; sc.onload = () => res(window.THREE.GLTFLoader ? window.THREE : null); sc.onerror = () => { gltfP = null; res(null); }; document.head.appendChild(sc);
+  })));
+  const assetC = {};
+  function asset(name) {
+    return assetC[name] || (assetC[name] = loadGLTF().then(T => !T ? null : new Promise(res => {
+      const l = new T.GLTFLoader(); l.setMeshoptDecoder(T.MeshoptDecoder);
+      l.load(DIR + 'assets/' + name + '.glb?v=' + AV_VER, g => res(g), undefined, () => { delete assetC[name]; res(null); });
+    })));
+  }
+  const skyC = {};
+  function skyTex(THREE, t) { return skyC[t] || (skyC[t] = new Promise(res => { new THREE.TextureLoader().load(DIR + 'assets/sky_' + t + '.webp?v=' + AV_VER, tx => res(tx), undefined, () => { delete skyC[t]; res(null); }); })); }
+  const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
+  // 컴퓨터 장수 7명 (Skillcom 원본 마법사 · 움직임: 대기 걷기 시전 융합 맞음 쓰러짐 승리). 내 캐릭터는 늘 gogo?gogo! 아바타
+  const HEROES = { Haesu: '판옥선 수군 Haesu', Beopsan: '승병 Beopsan', Seonbi: '의병 선비 Seonbi', Taegang: '마법장수 Taegang', Kan: '초원 주술사 Kan', Cute: '한밤 점술가 Cute', Seacher: '떠돌이 전사 Seacher' };   // v46: Skillcom 원본 마법사 7명
+  const HERO_IDS = Object.keys(HEROES);
+  // 전장 3곳 (Skillcom 원본 그대로: 성벽 위 · 판옥선 갑판 · 관아 앞마당) — 판마다 뽑기
+  const ARENAS = { wall: '성벽 위', ship: '판옥선 갑판', gwana: '관아 앞마당' };
+  const ARENA_IDS = Object.keys(ARENAS);
+  const PROPS = { wall: ['wall_gate', 'wall_beacon', 'wall_parapet'], ship: ['ship_tower', 'ship_panok', 'ship_turtle'], gwana: ['gwana_hall', 'gwana_cannon', 'gwana_arms', 'gwana_fence'] };
+  const FX = { cold: 'fx_ice', earth: 'fx_earth', dark: 'fx_dark' };
 
   /* ================= 화면 모양 ================= */
   const CSS = `
@@ -242,20 +267,24 @@
 
       /* ---------- 컴퓨터와 대결 (1:1 · 2:2) ---------- */
       const DIFFS = { easy: { lv: -3, cast: 1.5, lead: 0.2, aim: 0.09, n: '쉬움' }, normal: { lv: 0, cast: 1, lead: 0.6, aim: 0.03, n: '보통' }, hard: { lv: 3, cast: 0.72, lead: 0.95, aim: 0.012, n: '어려움' } };
-      function cpuEntry(i, team, lv, diff, nm, ally) { return { id: 'cpu' + i, cpu: true, team, nick: nm, lv, av: makeEnemyAvatar(ally ? 'ally' : i), stat: cpuStat(lv), skills: pickN(ELS, 4), diff }; }
+      // 컴퓨터 = Skillcom 장수 4명 중 한 명 (한 판에 겹치지 않게). 이름 뒤에 난이도
+      function cpuEntry(i, team, lv, diff, tail, ally, used) {
+        const left = HERO_IDS.filter(h => !(used || []).includes(h)), QA = window.__forceHeroes, hero = QA && QA.length ? QA.shift() : pick(left.length ? left : HERO_IDS);   // __forceHeroes = 점검용 if (used) used.push(hero);
+        return { id: 'cpu' + i, cpu: true, team, hero, nick: HEROES[hero] + (tail ? ' ' + tail : ''), lv, av: makeEnemyAvatar(ally ? 'ally' : i), stat: cpuStat(lv), skills: pickN(ELS, 4), diff };
+      }
       function startCpu(diff) {
-        const D = DIFFS[diff] || DIFFS.normal, lv = clamp(LV + D.lv, 1, 100), four = S.mode === 4;
+        const D = DIFFS[diff] || DIFFS.normal, lv = clamp(LV + D.lv, 1, 100), four = S.mode === 4, used = [];
         const ros = [{ id: Hub.clientId, team: 0 }];
-        if (four) ros.push(cpuEntry(0, 0, LV, 'normal', '조선 장수', true));
-        ros.push(cpuEntry(1, 1, lv, diff, 'Skillcom 장수' + (four ? ' 1' : '') + ' (' + D.n + ')'));
-        if (four) ros.push(cpuEntry(2, 1, lv, diff, 'Skillcom 장수 2 (' + D.n + ')'));
-        startBattle({ cpu: true, diff, size: four ? 4 : 2, roster: ros });
+        if (four) ros.push(cpuEntry(0, 0, LV, 'normal', '', true, used));
+        ros.push(cpuEntry(1, 1, lv, diff, '(' + D.n + ')', false, used));
+        if (four) ros.push(cpuEntry(2, 1, lv, diff, '(' + D.n + ')', false, used));
+        startBattle({ cpu: true, diff, size: four ? 4 : 2, roster: ros, arena: (window.__GOGO_QA && window.__GOGO_QA.scfArena) || pick(ARENA_IDS) });
       }
 
       /* ---------- 온라인 방 (1:1 = 2명 · 2:2 = 4명, 모자라면 방장이 컴퓨터로 채움) ---------- */
       function lobby() {
         if (lobbyCh) return;
-        lobbyCh = Hub.channel('scf-lobby', { onPeers: list => { rooms = new Map(); (list || []).forEach(s => { if (s && s.code) rooms.set(s.code, s); }); if (!battle) renderLobby(); }, onMsg() {} });
+        lobbyCh = Hub.channel('scf-lobby', { onPeers: list => { rooms = new Map(); (list || []).forEach(s => { if (s && s.code) rooms.set(s.code, s); }); if (!battle && !starting) renderLobby(); }, onMsg() {} });
         lobbyCh.track({ id: Hub.clientId });
       }
       const myInfo = () => ({ id: Hub.clientId, nick: nick(), lv: LV, av, stat: S.stat, skills: S.skills, at: joinAt, team: myPick });
@@ -304,24 +333,33 @@
           let t = roomSize === 2 ? i % 2 : (p.team === 0 || p.team === 1 ? p.team : (cnt[0] <= cnt[1] ? 0 : 1)); if (cnt[t] >= half) t = 1 - t; cnt[t]++;
           return { id: p.id, nick: String(p.nick || '').slice(0, 12), lv: +p.lv || 1, av: p.av, stat: p.stat || {}, skills: p.skills, team: t };
         });
-        const lv = Math.round(ros.reduce((a, r) => a + r.lv, 0) / ros.length); let k = 0;
-        [0, 1].forEach(t => { while (cnt[t] < half) { cnt[t]++; ros.push(Object.assign(cpuEntry(++k, t, lv, 'normal', '컴퓨터 장수 ' + k), { owner: Hub.clientId })); } });
-        const msg = { t: 'start', from: Hub.clientId, size: roomSize, roster: ros };
+        const lv = Math.round(ros.reduce((a, r) => a + r.lv, 0) / ros.length), used = []; let k = 0;
+        [0, 1].forEach(t => { while (cnt[t] < half) { cnt[t]++; ros.push(Object.assign(cpuEntry(++k, t, lv, 'normal', '(컴퓨터)', false, used), { owner: Hub.clientId })); } });
+        const arena = pick(ARENA_IDS), msg = { t: 'start', from: Hub.clientId, size: roomSize, roster: ros, arena };
         roomCh.send(msg); setTimeout(() => { if (roomCh) roomCh.send(msg); }, 900);   // 혹시 못 받은 사람을 위해 한 번 더
         lobbyCh.track({ id: Hub.clientId });
-        startBattle({ net: true, host: true, size: roomSize, roster: ros });
+        startBattle({ net: true, host: true, size: roomSize, roster: ros, arena });
       }
       function guestStart(m) {
         if (!(m.roster || []).some(r => r.id === Hub.clientId && !r.cpu)) { A.toast('방이 가득 차서 못 들어갔어요'); closeRoom(); return; }
         starting = true;
-        startBattle({ net: true, host: false, size: m.size, roster: m.roster });
+        startBattle({ net: true, host: false, size: m.size, roster: m.roster, arena: ARENAS[m.arena] ? m.arena : 'wall' });
       }
 
       /* ================= 3D 대결 ================= */
       async function startBattle(opt) {
-        let THREE;
+        starting = true; let THREE;
         try { THREE = await loadThree(); } catch (e) { starting = false; A.toast('3D 엔진을 불러오지 못했어요. 새로고침해 주세요'); return; }
         if (!alive) return;
+        // 전장 · 장수 3D 파일 미리 받기 (최대 12초 — 늦거나 없으면 예전 모양으로 그냥 시작)
+        if (!ARENAS[opt.arena]) opt.arena = 'wall';
+        body.innerHTML = `<div class="sf-card" style="text-align:center;padding:40px 14px"><h3 style="justify-content:center">${ARENAS[opt.arena]} 전장으로 가는 중…</h3><p class="sub">장수와 전장을 불러오고 있어요</p></div>`;
+        const heroes = [...new Set(opt.roster.filter(r => r.cpu && HEROES[r.hero]).map(r => r.hero))];
+        const names = heroes.map(h => 'hero_' + h).concat(PROPS[opt.arena], Object.values(FX));
+        const got = await withTimeout(Promise.all([Promise.all(names.map(asset)), skyTex(THREE, opt.arena)]), 12000);
+        if (!alive) return;
+        const pre = { gl: {}, sky: got ? got[1] : null }; if (got) names.forEach((n, i) => { pre.gl[n] = got[0][i]; });
+        opt.pre = pre;
         battle = makeBattle(THREE, opt); starting = false;
       }
 
@@ -343,7 +381,8 @@
         const size = () => { const r = stage.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); cam.aspect = r.width / Math.max(1, r.height); cam.updateProjectionMatrix(); };
         size(); const onRs = () => size(); window.addEventListener('resize', onRs);
         if (matchMedia('(pointer: coarse)').matches) { try { stage.scrollIntoView({ block: 'center' }); } catch (e) { /* noop */ } }
-        buildArena(THREE, scene);
+        const pre = opt.pre || { gl: {} };
+        buildArena(THREE, scene, opt.arena, pre);
 
         /* --- 몸 (아바타 도트 → 3D 블록) --- */
         function voxel(avatar, tint) {
@@ -364,6 +403,37 @@
           const sh = new THREE.Mesh(new THREE.CircleGeometry(0.45, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.01; grp.add(sh);
           grp.userData.body = mesh; return grp;
         }
+        function skinnedBox(THREE, root, clip) {
+          if (clip) { const mx = new THREE.AnimationMixer(root); mx.clipAction(clip).play(); mx.update(0); }
+          root.updateMatrixWorld(true);
+          const bx = new THREE.Box3(), v = new THREE.Vector3();
+          root.traverse(o => {
+            if (!o.isSkinnedMesh) return; o.skeleton.update(); const pos = o.geometry.attributes.position, step = Math.max(1, Math.floor(pos.count / 1500));
+            for (let i = 0; i < pos.count; i += step) { v.fromBufferAttribute(pos, i); o.boneTransform(i, v); v.applyMatrix4(o.matrixWorld); bx.expandByPoint(v); }
+          });
+          if (bx.isEmpty()) bx.setFromObject(root);
+          return bx;
+        }
+        /* --- Skillcom 장수 3D 몸 (Meshy) + 움직임. U.act('cast') 처럼 한 번 하는 동작을 틀고, 끝나면 대기·걷기로 --- */
+        function heroBody(U, hero) {
+          const g = pre.gl['hero_' + hero]; if (!g || !THREE.cloneSkinned) return null;
+          const model = THREE.cloneSkinned(g.scene), grp = new THREE.Group();
+          // 뼈로 움직이는 몸은 그림 상자 크기가 실제와 달라서, 서 있는 자세의 꼭짓점을 직접 재서 키 1.85m 로 맞춤
+          const box = skinnedBox(THREE, model, g.animations.find(c => c.name === 'idle')), h = box.max.y - box.min.y || 1, k = 1.85 / h;
+          model.scale.setScalar(k); model.position.y = -box.min.y * k; model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; const m = o.material = o.material.clone(); if ('metalness' in m) { m.metalness = 0; m.metalnessMap = null; m.roughness = 0.85; } } });   // 금속 반사 없이 (환경 그림이 없어 금속은 까맣게 나옴)
+          grp.add(model);
+          const sh = new THREE.Mesh(new THREE.CircleGeometry(0.45, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.01; grp.add(sh);
+          const mixer = new THREE.AnimationMixer(model), acts = {};
+          g.animations.forEach(c => { acts[c.name] = mixer.clipAction(c); });
+          ['cast', 'fuse', 'hit', 'die', 'win'].forEach(n => { const a = acts[n]; if (a) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; } });
+          let cur = null, busy = 0;
+          const play = (n, fade) => { const a = acts[n]; if (!a || cur === a) return; a.reset().setEffectiveWeight(1).fadeIn(fade || 0.2).play(); if (cur) cur.fadeOut(fade || 0.2); cur = a; };
+          U.hero = hero;
+          U.act = n => { if (U.dead && n !== 'die') return; const a = acts[n] || (n === 'fuse' && acts.cast); if (!a) return; play(acts[n] ? n : 'cast', n === 'hit' ? 0.1 : 0.15); busy = n === 'die' || n === 'win' ? 1e9 : Math.min(a.getClip().duration, n === 'hit' ? 0.6 : 1.2); };
+          U.anim = (dt, moving) => { mixer.update(dt); if (busy > 0) { busy -= dt; return; } if (!U.dead) play(moving ? 'walk' : 'idle'); };
+          play('idle', 0); grp.userData.hero = true;
+          return grp;
+        }
 
         /* --- 참가자 (나 · 같은 편 · 상대). own = 이 기기가 움직이고 체력을 정하는 몸 (나 + 컴퓨터 대결의 컴퓨터 + 온라인 방장이 맡은 컴퓨터) --- */
         const ros = opt.roster, myR = ros.find(r => r.id === Hub.clientId && !r.cpu), myTeam = myR.team;
@@ -373,7 +443,8 @@
           const U = { id: r.id, me: isMe, cpu: !!r.cpu, owner: r.owner || '', team: r.team, nick: isMe ? nick() : String(r.nick || ''), lv: isMe ? LV : r.lv, skills: r.skills || ['fire', 'cold', 'bolt', 'earth'],
             x, z, y: 0, vy: 0, tx: x, tz: z, px: x, pz: z, vx: 0, vz: 0, yaw: r.team ? Math.PI : 0, pitch: 0, hp: F.hp, mp: F.mp, F, cds: {}, slow: 0, burn: 0, dead: false,
             own: isMe || (!!r.cpu && (opt.cpu || opt.host)), ai: r.cpu ? { t: 1.5, move: 0, strafe: 1, D: DIFFS[r.diff] || DIFFS.normal } : null };
-          U.mesh = voxel(isMe ? av : r.av, r.cpu && r.team !== myTeam ? '#3A2050' : null); scene.add(U.mesh);
+          U.mesh = (r.cpu && heroBody(U, r.hero)) || voxel(isMe ? av : r.av, r.cpu && r.team !== myTeam ? '#3A2050' : null); scene.add(U.mesh);
+          U.lastHp = U.hp;
           return U;
         });
         const me = units.find(u => u.me), byId = {}; units.forEach(u => { byId[u.id] = u; });
@@ -405,13 +476,26 @@
             const d = dir.clone(); if (sp.count > 1) d.applyAxisAngle(new THREE.Vector3(0, 1, 0), (i - 1) * 0.12);
             const el = sp.els[i % sp.els.length], m = new THREE.Mesh(new THREE.SphereGeometry(sp.r, 14, 10), new THREE.MeshBasicMaterial({ color: EL[el].c }));
             const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(THREE, EL[el].c2), color: EL[el].c, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); glow.scale.setScalar(sp.r * 5); m.add(glow);
-            m.position.copy(o); scene.add(m);
+            const fxm = fxModel(el, sp.r); if (fxm) { m.material.visible = false; m.add(fxm); }
+            m.position.copy(o); scene.add(m); if (fxm) m.lookAt(o.clone().add(d));
             B.shots.push({ m, v: d.multiplyScalar(sp.spd), from: U, team: U.team, els: sp.els, dmg: sp.dmg * U.F.dmgK / sp.count * (sp.count > 1 ? 1.15 : 1), r: sp.r, life: 3, home: sp.els.includes('dark'), fused: sp.fused });
           }
           if (!remote && B.net && U.own) send({ t: 'c', id: U.id, a, b: b || null, d: [dir.x, dir.y, dir.z].map(v => +v.toFixed(3)) });
+          if (U.act) U.act(b ? 'fuse' : 'cast');
           if (U.me) showCombo(sp);
-          burst(o, sp.els[0], 10);
+          if (!(U.me && B.view === 1)) burst(o, sp.els[0], 10);   // 1인칭에서는 눈앞 조각이 화면을 가려서 안 뿌림
           return true;
+        }
+        // 얼음 · 땅 · 암흑 마법은 Skillcom 원본의 Meshy 모양 (얼음창 · 바위창 · 암흑수정). 나머지는 빛나는 구슬
+        const fxBase = {};
+        function fxModel(el, r) {
+          const g = pre.gl[FX[el]]; if (!g) return null;
+          let b = fxBase[el];
+          if (!b) { b = fxBase[el] = g.scene; const bx = new THREE.Box3().setFromObject(b), sz = new THREE.Vector3(); bx.getSize(sz); b.userData.k = 1 / Math.max(sz.x, sz.y, sz.z, 0.001); b.userData.c = bx.getCenter(new THREE.Vector3()); }
+          const w = new THREE.Group(), c = b.clone(true), k = b.userData.k * r * (el === 'dark' ? 2.4 : 3.2);
+          c.scale.setScalar(k); c.position.copy(b.userData.c).multiplyScalar(-k);
+          if (el !== 'dark') { const q = new THREE.Group(); q.rotation.x = Math.PI / 2; q.add(c); w.add(q); } else w.add(c);   // 창 끝이 날아가는 쪽을 보게
+          w.userData.spin = el === 'dark' ? 6 : 0; return w;
         }
         function hit(T, s) {   // T 는 이 기기가 맡은 몸일 때만 불림
           const F = T.F; let dmg = 0; s.els.forEach(e => { dmg += s.dmg / s.els.length * (1 - Math.min(50, F.res[e] || 0) / 100); });
@@ -517,7 +601,10 @@
             cast(U, a, b, aim.normalize());
           }
         }
-        function moveBody(U, mx, mz) { const nx = clamp(U.x + mx, -ARENA + 0.6, ARENA - 0.6), nz = clamp(U.z + mz, -ARENA + 0.6, ARENA - 0.6); if (!blocked(nx, U.z)) U.x = nx; if (!blocked(U.x, nz)) U.z = nz; }
+        function moveBody(U, mx, mz) {   // 둥근 전장 (반지름 ARENA) 밖으로 못 나감 · 기둥은 돌아감
+          let nx = U.x + mx, nz = U.z + mz; const l = Math.hypot(nx, nz), R = ARENA - 0.6; if (l > R) { nx *= R / l; nz *= R / l; }
+          if (!blocked(nx, U.z)) U.x = nx; if (!blocked(U.x, nz)) U.z = nz;
+        }
 
         /* --- 온라인: 각자 맡은 몸의 자리·체력을 보냄 (컴퓨터는 방장이 맡음). 맞았는지는 맞은 몸을 맡은 기기가 판단 --- */
         function send(m) { if (roomCh) roomCh.send(Object.assign({ from: Hub.clientId }, m)); }
@@ -576,20 +663,28 @@
               const T = tg.find(u => Math.hypot(p.x - u.x, p.z - u.z) < 0.45 + s.r && Math.abs(p.y - (u.y + 0.9)) < 1 + s.r);
               if (T) { if (T.own) hit(T, s); else if (s.from.me) floatText(T, '명중!', '#FFD23F'); burst(p, s.els[0], s.fused ? 26 : 14); kill(s); return false; }
             }
-            if (s.life <= 0 || p.y < 0 || Math.abs(p.x) > ARENA + 4 || Math.abs(p.z) > ARENA + 4 || blocked(p.x, p.z)) { burst(p, s.els[0], 6); kill(s); return false; }
+            if (s.m.children[1] && s.m.children[1].userData.spin) s.m.children[1].rotation.z += dt * s.m.children[1].userData.spin;
+            if (s.life <= 0 || p.y < 0 || Math.hypot(p.x, p.z) > ARENA + 6 || blocked(p.x, p.z)) { burst(p, s.els[0], 6); kill(s); return false; }
             return true;
           });
           B.parts = B.parts.filter(q => { q.life -= dt; q.m.position.addScaledVector(q.v, dt); q.v.y -= 6 * dt; q.m.material.opacity = Math.max(0, q.life / q.max); if (q.life <= 0) { scene.remove(q.m); q.m.geometry.dispose(); q.m.material.dispose(); return false; } return true; });
           // 쓰러짐 · 승패 (한 편이 모두 쓰러지면 끝)
           units.forEach(U => {
             if (U.dead || U.hp > 0 || !B.started) return;
-            U.dead = true; U.hp = 0; burst(new THREE.Vector3(U.x, U.y + 1, U.z), 'dark', 22);
+            U.dead = true; U.hp = 0; burst(new THREE.Vector3(U.x, U.y + 1, U.z), 'dark', 22); if (U.act) U.act('die');
             if (U.me) { B.ch = null; markCharge(); if (units.some(o => ally(o) && !o.dead)) flash('쓰러졌어요! 같은 편을 응원해요', 2.4); }
             else if (!B.over) flash((ally(U) ? '같은 편 ' : '') + U.nick + ' 쓰러짐!', 1.2);
           });
           if (!B.over && B.started) { if (!foes().some(u => !u.dead)) end(true); else if (!units.some(u => ally(u) && !u.dead)) end(false); }
           // 몸 · 카메라 (내가 쓰러지면 살아 있는 같은 편을 따라 봄)
-          units.forEach(U => { U.mesh.position.set(U.x, U.y + (U.me && !U.dead && Math.hypot(U.vx, U.vz) > 0.5 ? Math.abs(Math.sin(B.t * 10)) * 0.06 : 0) + (U.dead ? 0.25 : 0), U.z); U.mesh.rotation.set(U.dead ? -Math.PI / 2 : 0, U.yaw + Math.PI, 0, 'YXZ'); });
+          units.forEach(U => {
+            if (U.anim) {   // 3D 장수: 쓰러짐 · 맞음도 움직임으로
+              if (U.hp < U.lastHp - 0.5 && !U.dead) U.act('hit');
+              U.anim(dt, Math.hypot(U.vx, U.vz) > 0.6);
+              U.mesh.position.set(U.x, U.y, U.z); U.mesh.rotation.set(0, U.yaw, 0);   // Meshy 몸은 처음부터 앞(-z)을 봄
+            } else { U.mesh.position.set(U.x, U.y + (U.me && !U.dead && Math.hypot(U.vx, U.vz) > 0.5 ? Math.abs(Math.sin(B.t * 10)) * 0.06 : 0) + (U.dead ? 0.25 : 0), U.z); U.mesh.rotation.set(U.dead ? -Math.PI / 2 : 0, U.yaw + Math.PI, 0, 'YXZ'); }
+            U.lastHp = U.hp;
+          });
           const camU = me.dead ? (units.find(u => ally(u) && !u.dead) || me) : me, third = B.view === 3 || me.dead;
           me.mesh.visible = third;
           if (!third) { cam.position.set(me.x, me.y + 1.6, me.z); }
@@ -629,6 +724,7 @@
         /* --- 끝 --- */
         async function end(win) {
           if (B.over) return; B.over = true; if (document.pointerLockElement) document.exitPointerLock();
+          units.forEach(u => { if (u.act && !u.dead && ally(u) === win) u.act('win'); });
           if (B.net) sendPos();
           if (win) S.wins++; else S.losses++; saveRow(S);
           const pts = win ? ((CFG.points && CFG.points.win) || 0) : 0;
@@ -648,7 +744,7 @@
           if (alive) renderLobby();
         }
         B.stop = stop; B.end = end;
-        window.__scf = { B, me, units, op: foes()[0], foes, press, fire, cancelCharge, cast: (a, b) => cast(me, a, b), end };   // 점검(테스트)용
+        window.__scf = { B, me, units, scene, THREE, op: foes()[0], foes, press, fire, cancelCharge, cast: (a, b) => cast(me, a, b), end };   // 점검(테스트)용
         return B;
       }
 
@@ -670,36 +766,109 @@
     }
   };
 
-  /* ================= 경기장 (임시 — Skillcom 원본 배경으로 바꿀 자리) =================
-   *  지금: 조선 성곽 느낌의 돌 경기장 (바닥 돌판 · 성벽 · 깃발 · 기둥 · 노을 하늘) */
-  const ARENA = 16;
+  /* ================= 전장 — Skillcom 원본 (임진왜란 해질녘 전장 3곳) =================
+   *  성벽 위(wall) · 판옥선 갑판(ship) · 관아 앞마당(gwana). 그림 하늘 + Meshy 소품 + 둥근 결투 마당 + 기둥 4개(숨을 곳)
+   *  소품 자리 · 크기는 원본 mfworld.gd 의 _theme_wall / _theme_ship / _theme_gwana 를 따름 (마당이 원본보다 넓어서 그만큼 바깥으로) */
+  const ARENA = 16;                     // 둥근 마당 반지름 (m)
   const blocks = [];
   const blocked = (x, z) => blocks.some(b => Math.abs(x - b.x) < b.w / 2 + 0.3 && Math.abs(z - b.z) < b.d / 2 + 0.3);
   function canvasTex(THREE, w, h, fn) { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); fn(x, w, h); const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; return t; }
   const glowC = {};
   function glowTex(THREE, col) { return glowC[col] || (glowC[col] = canvasTex(THREE, 64, 64, (x) => { const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, col); g.addColorStop(0.3, col + 'AA'); g.addColorStop(1, col + '00'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); })); }
-  function buildArena(THREE, scene) {
-    blocks.length = 0;
-    scene.background = canvasTex(THREE, 4, 256, (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#2A1E4A'); g.addColorStop(0.55, '#C8605A'); g.addColorStop(1, '#F5B060'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
-    scene.background.magFilter = THREE.LinearFilter;
-    scene.fog = new THREE.Fog(0x8A5070, 30, 90);
-    scene.add(new THREE.HemisphereLight(0xFFE2C0, 0x403050, 0.75));
-    const sun = new THREE.DirectionalLight(0xFFD8A8, 0.85); sun.position.set(12, 20, 8); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22 }); scene.add(sun);
-    // 바닥: 돌판 (도트 무늬)
-    const floor = canvasTex(THREE, 128, 128, (x) => { for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) { const v = 118 + ((i * 7 + j * 13) % 5) * 8; x.fillStyle = `rgb(${v},${v - 8},${v - 18})`; x.fillRect(i * 16, j * 16, 16, 16); x.fillStyle = 'rgba(40,30,20,.5)'; x.fillRect(i * 16, j * 16, 16, 1); x.fillRect(i * 16, j * 16, 1, 16); } });
-    floor.wrapS = floor.wrapT = THREE.RepeatWrapping; floor.repeat.set(8, 8);
-    const g = new THREE.Mesh(new THREE.PlaneGeometry(ARENA * 2 + 8, ARENA * 2 + 8), new THREE.MeshLambertMaterial({ map: floor })); g.rotation.x = -Math.PI / 2; g.receiveShadow = true; scene.add(g);
-    // 가운데 원 (태극 느낌 색)
-    const ring = new THREE.Mesh(new THREE.RingGeometry(3.2, 3.6, 48), new THREE.MeshBasicMaterial({ color: 0xD2343A })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.02; scene.add(ring);
-    // 성벽 (네 둘레) + 성가퀴
-    const wallM = new THREE.MeshLambertMaterial({ color: 0x8A7A68 }), capM = new THREE.MeshLambertMaterial({ color: 0x5A4A40 });
-    const side = (x, z, w, d) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 3, d), wallM); m.position.set(x, 1.5, z); m.castShadow = m.receiveShadow = true; scene.add(m); for (let i = -w / 2 + 0.6; i < w / 2; i += 1.4) { const c = new THREE.Mesh(new THREE.BoxGeometry(d > w ? 0.9 : 0.8, 0.6, d > w ? 0.8 : 0.9), capM); if (w > d) c.position.set(x + i, 3.3, z); else c.position.set(x, 3.3, z + i); scene.add(c); } if (d > w) for (let i = -d / 2 + 0.6; i < d / 2; i += 1.4) { const c = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.8), capM); c.position.set(x, 3.3, z + i); scene.add(c); } };
-    side(0, -ARENA - 0.5, ARENA * 2 + 2, 1); side(0, ARENA + 0.5, ARENA * 2 + 2, 1); side(-ARENA - 0.5, 0, 1, ARENA * 2 + 2); side(ARENA + 0.5, 0, 1, ARENA * 2 + 2);
-    // 깃발 (빨강·파랑)
-    [[-10, -ARENA, 0xD2343A], [10, -ARENA, 0x3E4AC0], [-10, ARENA, 0x3E4AC0], [10, ARENA, 0xD2343A]].forEach(([x, z, c]) => { const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4), capM); pole.position.set(x, 5, z); scene.add(pole); const fl = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1), new THREE.MeshLambertMaterial({ color: c, side: THREE.DoubleSide })); fl.position.set(x + 0.8, 6.4, z); scene.add(fl); });
-    // 기둥 (숨을 곳)
-    const pilM = new THREE.MeshLambertMaterial({ color: 0x9A3A2A });
-    [[-6, -3], [6, 3], [-6, 4], [6, -4], [0, 0.01]].slice(0, 4).forEach(([x, z]) => { const p = new THREE.Mesh(new THREE.BoxGeometry(1.2, 3.2, 1.2), pilM); p.position.set(x, 1.6, z); p.castShadow = p.receiveShadow = true; scene.add(p); const roof = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.3, 1.8), capM); roof.position.set(x, 3.35, z); scene.add(roof); blocks.push({ x, z, w: 1.2, d: 1.2 }); });
+  // 원본 theme_palette() 그대로
+  const PAL = {
+    wall: { top: '#37344A', hor: '#C8653A', fog: 0x7A6656, sun: 0xFFC994, sunE: 1.55, floor: ['#7C776D', '#5C5850', '#2A2622'] },
+    ship: { top: '#2E3A4E', hor: '#B8693F', fog: 0x5E6670, sun: 0xFFD0A0, sunE: 1.6, floor: ['#6A4D34', '#4A3524', '#1A120B'] },
+    gwana: { top: '#3A3436', hor: '#A85A32', fog: 0x6E6358, sun: 0xFFD2A0, sunE: 1.55, floor: ['#8C8475', '#6A6256', '#37312A'] }
+  };
+  // 바닥 무늬: 박석 돌판(kind 0) · 널빤지(kind 1)
+  function floorTex(THREE, kind, c) {
+    const t = canvasTex(THREE, 256, 256, (x) => {
+      x.fillStyle = c[1]; x.fillRect(0, 0, 256, 256);
+      if (kind === 1) { for (let j = 0; j < 16; j++) { const off = (j * 97) % 256; for (let i = -1; i < 3; i++) { const v = (j * 31 + i * 17) % 7; x.fillStyle = v < 3 ? c[0] : c[1]; x.fillRect(off + i * 128, j * 16 + 1, 126, 14); x.fillStyle = c[2]; x.fillRect(off + i * 128 + 126, j * 16, 2, 16); } x.fillStyle = c[2]; x.fillRect(0, j * 16, 256, 1); } }
+      else { for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) { const o = j % 2 ? 16 : 0, v = (i * 7 + j * 13) % 5; x.fillStyle = v < 2 ? c[0] : c[1]; x.fillRect(i * 32 + o + 1, j * 32 + 1, 30, 30); x.globalAlpha = 0.12; x.fillStyle = '#000'; x.fillRect(i * 32 + o + 1 + (v * 5) % 20, j * 32 + 4 + v * 3, 6, 4); x.globalAlpha = 1; } x.fillStyle = c[2]; for (let j = 0; j <= 8; j++) x.fillRect(0, j * 32, 256, 2); for (let j = 0; j < 8; j++) for (let i = 0; i <= 8; i++) x.fillRect(i * 32 + (j % 2 ? 16 : 0), j * 32, 2, 32); }
+    });
+    t.magFilter = THREE.LinearFilter; t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+  }
+  function buildArena(THREE, scene, theme, pre) {
+    blocks.length = 0; theme = PAL[theme] ? theme : 'wall';
+    const P = PAL[theme], gl = (pre && pre.gl) || {};
+    const lam = c => new THREE.MeshLambertMaterial({ color: c });
+    const box = (w, h, d, mat, x, y, z, ry) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); if (ry) m.rotation.y = ry; m.castShadow = m.receiveShadow = true; scene.add(m); return m; };
+    const cyl = (rt, rb, h, mat, x, y, z, seg) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 16), mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; scene.add(m); return m; };
+    // 소품: 원본 _prop() 처럼 — 크기(size)를 축(axis 0=가로 1=높이 2=깊이)에 맞추고, 바닥 가운데를 pos 에
+    function prop(name, x, y, z, yawDeg, size, axis) {
+      const g = gl[name]; if (!g) return null;
+      const n = g.scene.clone(true), bx = new THREE.Box3().setFromObject(n), sz = new THREE.Vector3(); bx.getSize(sz);
+      const k = size / Math.max(0.001, [sz.x, sz.y, sz.z][axis || 0]), c = bx.getCenter(new THREE.Vector3());
+      const w = new THREE.Group(); n.position.set(-c.x * k, -bx.min.y * k, -c.z * k); n.scale.setScalar(k); w.add(n);
+      w.position.set(x, y, z); w.rotation.y = (yawDeg || 0) * Math.PI / 180;
+      n.traverse(o => { if (o.isMesh) { o.receiveShadow = true; } }); scene.add(w); return w;   // 소품은 그림자를 안 드리움 (느린 컴퓨터·휴대폰 배려)
+    }
+    // 하늘: 원본 그림 하늘 (없으면 노을 그라데이션)
+    if (pre && pre.sky) { const sk = pre.sky; sk.mapping = THREE.EquirectangularReflectionMapping; sk.encoding = THREE.sRGBEncoding; scene.background = sk; }
+    else { scene.background = canvasTex(THREE, 4, 256, (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, P.top); g.addColorStop(0.55, P.hor); g.addColorStop(1, '#2A2018'); x.fillStyle = g; x.fillRect(0, 0, w, h); }); scene.background.magFilter = THREE.LinearFilter; }
+    scene.fog = new THREE.Fog(P.fog, 45, 140);
+    scene.add(new THREE.HemisphereLight(0xFFE6CC, 0x3A3040, 0.8));
+    const fill = new THREE.DirectionalLight(0xFFE0C0, 0.35); fill.position.set(6, 8, 18); scene.add(fill);   // 앞에서 비추는 약한 빛 (장수 얼굴이 어둡지 않게)
+    const sun = new THREE.DirectionalLight(P.sun, P.sunE * 0.62); sun.position.set(-14, 18, 10); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); Object.assign(sun.shadow.camera, { left: -24, right: 24, top: 24, bottom: -24 }); scene.add(sun);
+    // 결투 마당 (원반) + 금테
+    const ft = floorTex(THREE, theme === 'ship' ? 1 : 0, P.floor); ft.repeat.set(ARENA / 4, ARENA / 4);
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(ARENA + 0.4, ARENA + 0.6, 0.3, 64), [new THREE.MeshLambertMaterial({ color: P.floor[2] }), new THREE.MeshLambertMaterial({ map: ft }), lam(P.floor[2])]);
+    disc.position.y = -0.15; disc.receiveShadow = true; scene.add(disc);
+    const edge = new THREE.Mesh(new THREE.RingGeometry(ARENA - 0.15, ARENA + 0.15, 96), new THREE.MeshBasicMaterial({ color: 0xC9A040 })); edge.rotation.x = -Math.PI / 2; edge.position.y = 0.02; scene.add(edge);
+    const mid = new THREE.Mesh(new THREE.RingGeometry(3.2, 3.5, 48), new THREE.MeshBasicMaterial({ color: 0xB8322A })); mid.rotation.x = -Math.PI / 2; mid.position.y = 0.02; scene.add(mid);
+    const R = ARENA + 1.2, stone = lam(0x6E6A63), red = lam(0x8E2F24), tile = lam(0x2E333A), wood = lam(0x4A3524);
+    if (theme === 'wall') {
+      // 🧱 성벽 위 — 성벽 몸통 · 성가퀴(줄지어) · 문루(상대 뒤) · 봉수대 · 아래 성 밖 땅
+      const gnd = new THREE.Mesh(new THREE.PlaneGeometry(420, 420), lam(0x3A2F25)); gnd.rotation.x = -Math.PI / 2; gnd.position.y = -7; scene.add(gnd);
+      cyl(R + 2.3, R + 2.8, 7.1, stone, 0, -3.65, 0, 48);
+      const pr = R + 2.0, n = Math.round(Math.PI * 2 * pr / 3.6);
+      for (let i = 0; i < n; i++) { const a = Math.PI * 2 * (i + 0.5) / n; if (Math.abs(Math.atan2(Math.sin(a + Math.PI / 2), Math.cos(a + Math.PI / 2))) < 0.42) continue;
+        const pp = prop('wall_parapet', Math.cos(a) * pr, 0, Math.sin(a) * pr, -a * 180 / Math.PI + 90, Math.PI * 2 * pr / n * 1.04, 0); if (pp) pp.scale.y = 2; else box(1.2, 1.1, 0.45, lam(0x74716B), Math.cos(a) * pr, 0.55, Math.sin(a) * pr, -a + Math.PI / 2); }
+      if (!prop('wall_gate', 0, 0, -(R + 2.6), 0, 12, 0)) { box(7.6, 0.6, 4, stone, 0, 0.3, -(R + 2.6)); box(8.6, 0.5, 5, tile, 0, 4.2, -(R + 2.6)); }
+      const ba = -Math.PI / 2 + 0.95, bp = [Math.cos(ba) * (R + 5), Math.sin(ba) * (R + 5)];
+      if (prop('wall_beacon', bp[0], 0, bp[1], -ba * 180 / Math.PI + 90, 6, 2)) cyl(3.4, 3.8, 7.1, stone, bp[0], -3.55, bp[1], 16);
+    } else if (theme === 'ship') {
+      // 🚢 판옥선 갑판 — 바다 · 갑판 · 주칠 난간 · 지휘 누각(상대 뒤) · 곁에 뜬 판옥선 · 거북선
+      const sea = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshPhongMaterial({ color: 0x2C4A5E, shininess: 60, specular: 0x8A6A50 })); sea.rotation.x = -Math.PI / 2; sea.position.y = -1.7; scene.add(sea);
+      const hw = R + 1.6, hl = R + 5, deck = floorTex(THREE, 1, ['#5E4430', '#41301F', '#17100A']); deck.repeat.set(hw / 4, hl / 4);
+      const hull = new THREE.Mesh(new THREE.BoxGeometry(hw * 2, 2.2, hl * 2), [lam(0x41301F), lam(0x41301F), new THREE.MeshLambertMaterial({ map: deck }), lam(0x2A1E14), lam(0x41301F), lam(0x41301F)]); hull.position.y = -1.25; hull.receiveShadow = true; scene.add(hull);
+      const lac = lam(0x8E2F24);
+      for (let z = -hl; z <= hl; z += 2.5) [-1, 1].forEach(sx => cyl(0.07, 0.07, 1, lac, sx * (hw - 0.1), 0.4, z, 6));
+      for (let x = -hw; x <= hw; x += 2.5) [-1, 1].forEach(sz => cyl(0.07, 0.07, 1, lac, x, 0.4, sz * hl, 6));
+      [-1, 1].forEach(sx => box(0.1, 0.1, hl * 2, lac, sx * (hw - 0.1), 0.95, 0)); [-1, 1].forEach(sz => box(hw * 2, 0.1, 0.1, lac, 0, 0.95, sz * hl));
+      [-1, 1].forEach(sx => box(0.1, 0.5, hl * 2, lam(0x2A6B5A), sx * (hw + 0.05), -0.65, 0));
+      if (!prop('ship_tower', 0, 0, -(R + 3.4), 0, 6.5, 1)) { box(5.4, 1, 3.2, wood, 0, 0.5, -(R + 3.4)); box(6.6, 1.2, 4.4, tile, 0, 3.6, -(R + 3.4)); }
+      prop('ship_panok', -(hw + 13), -3.3, -(R + 2), 90, 26, 0);
+      prop('ship_turtle', hw + 12, -2.7, -(R + 10), 115, 16, 0);
+    } else {
+      // 🏛 관아 앞마당 — 박석 · 홍살문(상대 뒤, 도형) · 관아 두 채 · 천자총통 · 무기더미 · 방책
+      const gnd = new THREE.Mesh(new THREE.PlaneGeometry(420, 420), lam(0x4A3D30)); gnd.rotation.x = -Math.PI / 2; gnd.position.y = -0.31; scene.add(gnd);
+      const hz = -(R + 6), lac = lam(0x9A2A20);
+      [-3.3, 3.3].forEach(x => { cyl(0.2, 0.24, 7.2, lac, x, 3.6, hz); box(0.75, 0.5, 0.75, stone, x, 0.25, hz); });
+      [5.6, 6.75].forEach(y => box(7.4, 0.3, 0.26, lam(0x2A6B5A), 0, y, hz));
+      for (let k = 0; k < 13; k++) cyl(0.035, 0.045, 1.2, lac, -3 + k * 0.5, 6.15, hz, 6);
+      const tg = new THREE.Mesh(new THREE.CircleGeometry(0.46, 24), new THREE.MeshBasicMaterial({ color: 0xB8322A })); tg.position.set(0, 7.3, hz + 0.05); scene.add(tg);
+      const tg2 = new THREE.Mesh(new THREE.CircleGeometry(0.46, 24, Math.PI, Math.PI), new THREE.MeshBasicMaterial({ color: 0x1F4E9C })); tg2.position.set(0, 7.3, hz + 0.06); scene.add(tg2);
+      [-1, 1].forEach(side => {
+        const x = side * (R + 6), z = -(R + 1), yaw = -side * 35;
+        if (!prop('gwana_hall', x, 0, z, yaw, 12, 0)) { box(8, 2.8, 3.8, lam(0xB5AA94), x, 1.4, z, yaw * Math.PI / 180); box(9, 1.2, 5, tile, x, 3.4, z, yaw * Math.PI / 180); }
+        prop('gwana_cannon', side * (R - 1.5), 0, -4, side > 0 ? -70 : 70, 2.6, 0);
+        prop('gwana_arms', side * (R - 1.2), 0, 5, side * 30, 2.2, 0);
+      });
+      for (let i = -5; i <= 5; i++) prop('gwana_fence', i * 3.2, 0, R + 2.5, 180, 3.3, 0);
+    }
+    // 🏮 기둥 4개 (숨을 곳) — 주칠 기둥 · 화강암 주춧돌 · 기와 지붕 · 청사초롱 (원본 기둥 모양)
+    const lanG = new THREE.MeshBasicMaterial({ color: 0xFF7A3A });
+    [[-6, -3.5], [6, 3.5], [-6, 4], [6, -4]].forEach(([x, z]) => {
+      box(1.5, 0.5, 1.5, stone, x, 0.25, z);
+      cyl(0.48, 0.55, 3.2, red, x, 2.1, z, 12);
+      box(1.2, 0.25, 1.2, lam(0x2A6B5A), x, 3.75, z);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(1.25, 0.9, 4), tile); roof.position.set(x, 4.3, z); roof.rotation.y = Math.PI / 4; roof.castShadow = true; scene.add(roof);
+      const lan = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.4, 8), lanG); lan.position.set(x + 0.62, 3.2, z); scene.add(lan);
+      blocks.push({ x, z, w: 1.2, d: 1.2 });
+    });
   }
   // 컴퓨터 상대 모습 (임시 — Skillcom 원본 상대로 바꿀 자리): 아바타 옷으로 만든 장수
   function makeEnemyAvatar(k) {

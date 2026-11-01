@@ -323,7 +323,7 @@
       p(w / 2 - 34, h - 70, 68, 8, '#FFD23F'); p(w / 2 - 34, h - 70, 68, 2, '#FFF3B0');
       [w / 2 - 70, w / 2 + 52].forEach(a => { p(a, 30, 18, 46, K); p(a + 2, 32, 14, 40, '#D2343A'); p(a + 2, 32, 14, 4, '#FFD23F'); p(a + 7, 48, 4, 8, '#FFD23F'); });
       x.font = '14px "Jua", "Malgun Gothic", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      p(w / 2 - 54, h - 100, 108, 24, K); p(w / 2 - 52, h - 98, 104, 20, '#3A2A1A'); x.fillStyle = '#FFE45C'; x.fillText('왕성 · 퀘스트', ox + w / 2, oy + h - 87);
+      p(w / 2 - 54, h - 100, 108, 24, K); p(w / 2 - 52, h - 98, 104, 20, '#3A2A1A'); x.fillStyle = '#FFE45C'; x.fillText('도원수 진영 · 퀘스트', ox + w / 2, oy + h - 87);
     } else {
       const wall = '#F3E6CC', wl = '#FFF6E0', wd = '#D8C8A8', roof = b.roof, rl = shade(roof, 0.25), rd = shade(roof, -0.28);
       // 벽 (나무판 + 기둥)
@@ -383,7 +383,7 @@
   function monSprite(mon, scale) {
     const key = mon.name + scale; if (monCache[key]) return monCache[key];
     // Meshy 그림이 있으면 그것을 씀 (보스: boss_r, 일반: mon_r 의 k번째 칸)
-    const boss = scale >= 6, im = mon.ri != null ? imgOk(boss ? 'boss_r' + mon.ri : 'mon_r' + mon.ri) : null;
+    const boss = scale >= 6, im = mon.ri != null && !mon.dot ? imgOk(boss ? 'boss_r' + mon.ri : 'mon_r' + mon.ri) : null;
     if (im && (boss || mon.k < 9)) {
       const sx = boss ? 0 : mon.k * 64, sw = boss ? im.naturalWidth : 64, sh = boss ? im.naturalHeight : 64;
       const [t, tx] = mk(sw, sh); tx.drawImage(im, sx, 0, sw, sh, 0, 0, sw, sh);
