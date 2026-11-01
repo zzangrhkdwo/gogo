@@ -1,5 +1,5 @@
 /*
- * 마법 융합 모험 (RPG) — 게임 데이터 (지도 · 몬스터 · 장비 · 포션 · 마법)
+ * skillcom RPG (RPG) — 게임 데이터 (지도 · 몬스터 · 장비 · 포션 · 마법)
  *  ※ 숫자를 고치면 바로 게임에 반영됩니다. 밸런스 조정은 이 파일에서 합니다.
  *
  *  세계 구조 (총 99칸: 마을 9 + 사냥터 90)
@@ -238,13 +238,15 @@
     monExp: m => Math.max(3, Math.round(F.need(m) / (22 + m * 0.4))), monGold: m => Math.round(3 + m * 1.4),
     boss: { hp: 12, atk: 1.6, exp: 15, gold: 10 }
   };
-  /* v43 스탯 (레벨 업마다 포인트 → 힘·민첩·지혜에 나눠 올림)
-   *  힘  = 기본 공격 피해 · 방어 · 체력    민첩 = 공격 속도 · 치명타    지혜 = 마법 피해(마력) · 마나 */
+  /* v44 스탯 4가지 (레벨 업마다 포인트 2개 → 원하는 곳에 · 스탯마다 최대 50)
+   *  힘 = 피해(기본 공격·마법 모두) · 민첩 = 이동 속도 · 지혜 = 마나 회복 · 체력 = 최대 체력 */
   const STAT = {
-    str: { name: '힘', color: '#FF8A8E', desc: '기본 공격 피해 · 방어 · 체력', atk: 0.7, def: 0.25, hp: 5 },
-    dex: { name: '민첩', color: '#9AF0B0', desc: '공격 속도 · 치명타 확률', aspd: 1.2, crit: 0.3 },
-    int: { name: '지혜', color: '#C8A8FF', desc: '마법 피해(마력) · 마나', mag: 0.8, mp: 4 },
-    baseCrit: 8, critMax: 60, critDmg: 1.6, atkCd: 0.42, atkCdMin: 0.18
+    keys: ['str', 'dex', 'int', 'vit'],
+    str: { name: '힘', color: '#FF8A8E', desc: '주는 피해 +2% (기본 공격·마법 모두)', dmg: 2 },
+    dex: { name: '민첩', color: '#9AF0B0', desc: '이동 속도 +1%', spd: 1 },
+    int: { name: '지혜', color: '#C8A8FF', desc: '마나 회복 +4%', mpRegen: 4 },
+    vit: { name: '체력', color: '#FFB86B', desc: '최대 체력 +2% (기본 체력 기준)', hpPct: 2 },
+    max: 50, baseCrit: 8, critDmg: 1.6, atkCd: 0.42
   };
 
   /* ---------------- 장비 ----------------

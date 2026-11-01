@@ -269,7 +269,7 @@
       const lives0 = () => (C().lives || {})[level] || 3;
       const bombs0 = () => C().bombs == null ? 2 : C().bombs;
       const lvMul = () => (C().levelBullet || {})[level] || 1;
-      const bspeed = () => (C().bulletBase || 140) * (1 + (C().bulletStep == null ? 0.12 : C().bulletStep) * (stage - 1)) * lvMul();
+      const bspeed = () => (C().bulletBase || 182) * (1 + (C().bulletStep == null ? 0.12 : C().bulletStep) * (stage - 1)) * lvMul();
       const hpMul = () => (1 + (stage - 1) * 0.12) * ({ easy: 0.8, normal: 1, hard: 1.15 }[level] || 1) * (P.length > 1 ? 1.35 : 1);
       const maxStage = () => Math.min(STAGES.length, C().stages || 10);
       const waveLen = () => (C().waveSec || 40) + stage * 2;
@@ -350,7 +350,15 @@
 
       /* ---------- 적 ---------- */
       function addEnemy(o) { const e = Object.assign({ id: nextId++, t: 0, flash: 0, vx: 0, vy: 0, cd: 1 + Math.random(), shots: 0 }, o); e.max = e.hp; E.push(e); return e; }
-      function shoot(x, y, ang, sp, k) { if (B.length > 460 || bombClear > 0) return; B.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, k: k || 0 }); }
+      /* 총알 수 배율(settings.js bulletCount, 기본 1.5) — 1.5면 총알 2발마다 1발씩 '짝 총알'이 살짝 비껴서 따라 나감 */
+      let extraAcc = 0, extraSide = 1;
+      function push1(x, y, ang, sp, k) { B.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, k: k || 0 }); }
+      function shoot(x, y, ang, sp, k) {
+        if (B.length > 700 || bombClear > 0) return;
+        push1(x, y, ang, sp, k);
+        extraAcc += Math.max(0, (C().bulletCount == null ? 1.5 : C().bulletCount) - 1);
+        while (extraAcc >= 1) { extraAcc -= 1; extraSide = -extraSide; push1(x, y, ang + extraSide * 0.09, sp * 0.86, k); }
+      }
       function aimed(x, y, sp, n, spread, k) { const t = target(x, y), a = Math.atan2(t.y - y, t.x - x); for (let i = 0; i < n; i++) shoot(x, y, a + (i - (n - 1) / 2) * spread, sp, k); }
       const HP = { line: 1, vee: 1, sweep: 1, dive: 3, bomber: 18, ground: 9, big: 70 };
       const SCORE = { line: 100, vee: 100, sweep: 150, dive: 200, bomber: 800, ground: 300, big: 3000 };

@@ -1,5 +1,5 @@
 /*
- * gogo?gogo! — 마법 융합 모험 · 온라인 (v42)
+ * gogo?gogo! — skillcom RPG · 온라인 (v42)
  *   서버 10개 × 최대 30명 (settings.js 의 online). 로그인한 사람만 (손님은 혼자 하기)
  *
  *   1) 서버 인원·자리: DB 함수 (supabase/rpg_online_v42.sql)
@@ -48,7 +48,7 @@
       net.leaveRoom(); net.server = 0; net.joined = false;
       if (live()) Hub._sb.rpc('rpg_leave').then(() => {}, () => {});
     };
-    net.leaveRoom = () => { if (net.ch) { try { net.ch.leave(); } catch (e) { /* noop */ } } net.ch = null; net.room = ''; net.peers.clear(); h.onPeers && h.onPeers(); };
+    net.leaveRoom = () => { if (net.ch) { try { net.ch.leave(); } catch (e) { /* noop */ } } net.ch = null; net.room = ''; net.peers.forEach((p, k) => h.onLeave && h.onLeave(k)); net.peers.clear(); h.onPeers && h.onPeers(); };
     // 지도(또는 건물 안)를 바꿀 때마다: 그 지도 채널로 옮김
     net.setRoom = (room, force) => {
       if (!net.joined) return;
@@ -71,7 +71,7 @@
         if (!p) { p = { cid: st.cid, x: st.x, y: st.y, tx: st.x, ty: st.y, vx: 0, vy: 0, face: 1, at: performance.now(), walk: 0 }; net.peers.set(st.cid, p); fresh = true; }
         Object.assign(p, { nick: String(st.nick || '').slice(0, 12), lv: +st.lv || 1, av: st.av, eq: st.eq || {}, hide: !!st.hide });
       });
-      net.peers.forEach((p, k) => { if (!seen.has(k)) net.peers.delete(k); });
+      net.peers.forEach((p, k) => { if (!seen.has(k)) { net.peers.delete(k); h.onLeave && h.onLeave(k); } });
       if (fresh) { net.lastKey = ''; net.sendT = 9; net.forceOnce = true; }   // 새로 온 사람에게 내 자리를 바로 알려 줌
       h.onPeers && h.onPeers();
     }
@@ -80,6 +80,7 @@
       const p = net.peers.get(m.cid); if (!p) return;
       if (m.t === 'p') { p.tx = m.x; p.ty = m.y; p.vx = m.vx || 0; p.vy = m.vy || 0; p.face = m.f || p.face; p.at = performance.now(); if (Math.hypot(p.x - m.x, p.y - m.y) > 200) { p.x = m.x; p.y = m.y; } }
       else if (m.t === 'c') { h.onFx && h.onFx(m, p); }
+      else if (m.t === 'tr' && m.to === Hub.clientId) { h.onTrade && h.onTrade(m, p); }   // v44 1:1 거래 (나에게 온 것만)
     }
 
     // 매 틱: 내 움직임 보내기(필요할 때만) · 다른 사람 부드럽게 움직이기 · 15초마다 자리 유지
@@ -109,6 +110,7 @@
         net.ch.send({ t: 'p', cid: Hub.clientId, x: Math.round(me.x), y: Math.round(me.y), vx: moving ? Math.round(me.vx) : 0, vy: moving ? Math.round(me.vy) : 0, f: me.face });
       }
     };
+    net.trade = msg => { if (net.ch) net.ch.send(Object.assign({ t: 'tr', cid: Hub.clientId }, msg)); };
     net.cast = msg => { if (net.ch && net.peers.size) net.ch.send(Object.assign({ t: 'c', cid: Hub.clientId }, msg)); };
     return net;
   }

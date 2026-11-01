@@ -1,5 +1,5 @@
 /*
- * gogo?gogo! — 마법 융합 모험 (도트 RPG · 혼자 플레이 첫 버전 v40 · v41 건물 안·사람·가방 창)
+ * gogo?gogo! — skillcom RPG (도트 RPG · 혼자 플레이 첫 버전 v40 · v41 건물 안·사람·가방 창)
  *
  *  파일 3개: data.js (숫자·목록) · world.js (지도 만들기·그림) · game.js (이 파일: 움직임·전투·창·저장)
  *  캐릭터: 사이트 아바타 그대로 + 장비를 위에 겹쳐 그림. 가방 창 '장비 안보이기' = 그림만 숨김 (능력치 그대로)
@@ -43,11 +43,12 @@
   function newSave() {
     const s = { v: SAVE_V, lv: 1, exp: 0, gold: 50, hp: 0, mp: 0, map: 'v1', x: null, y: null, home: 'v1',
       inv: [{ id: 'hp1', n: 5 }, { id: 'mp1', n: 3 }, { id: 'scroll', n: 1 }], eq: {}, hide: false,
-      stat: { str: 0, dex: 0, int: 0 }, sp: 0, skills: ['magicarrow'], slots: ['magicarrow', null, null, null], visited: ['v1'], play: 0, kills: 0, bosses: {}, help: false, savedAt: 0 };
+      stat: { str: 0, dex: 0, int: 0, vit: 0 }, statV: 2, sp: 0, skills: ['magicarrow'], slots: ['magicarrow', null, null, null], visited: ['v1'], play: 0, kills: 0, bosses: {}, help: false, savedAt: 0 };
     return s;
   }
   function fixSave(s) {
     const n = newSave(); if (!s || typeof s !== 'object' || s.v !== SAVE_V) return n;
+    const oldStatV = s.statV;   // 기본값을 채우기 전에 기억 (v44 스탯 바뀜 확인용)
     Object.keys(n).forEach(k => { if (s[k] === undefined) s[k] = n[k]; });
     s.lv = clamp(Math.floor(+s.lv || 1), 1, D.MAX_LV); s.exp = Math.max(0, +s.exp || 0); s.gold = Math.max(0, Math.floor(+s.gold || 0));
     if (!MAPBY[s.map]) s.map = 'v1'; if (!MAPBY[s.home] || MAPBY[s.home].kind !== 'village') s.home = 'v1';
@@ -57,10 +58,11 @@
     if (!s.skills.includes('magicarrow')) { s.skills.unshift('magicarrow'); if (Array.isArray(s.slots) && !s.slots.includes('magicarrow')) { const i = s.slots.indexOf(null); if (i >= 0) s.slots[i] = 'magicarrow'; } }   // v41 기본 마법
     s.slots = [0, 1, 2, 3].map(i => (s.slots && s.skills.includes(s.slots[i]) ? s.slots[i] : null));
     s.visited = (s.visited || []).filter(id => MAPBY[id]); if (!s.visited.includes('v1')) s.visited.unshift('v1');
-    // v43 스탯: 레벨에 맞는 포인트가 되도록 (예전 저장은 그동안 오른 레벨만큼 포인트를 받음)
-    const st = s.stat && typeof s.stat === 'object' ? s.stat : {}; s.stat = { str: Math.max(0, Math.floor(+st.str || 0)), dex: Math.max(0, Math.floor(+st.dex || 0)), int: Math.max(0, Math.floor(+st.int || 0)) };
-    const total = (s.lv - 1) * (CFG.statPerLevel || 3), used = s.stat.str + s.stat.dex + s.stat.int;
-    if (used > total) { s.stat = { str: 0, dex: 0, int: 0 }; s.sp = total; } else s.sp = total - used;
+    // v44 스탯 4가지 · 레벨당 2포인트 · 스탯마다 최대 50. v43(힘·민첩·지혜, 레벨당 3) 저장은 한 번 모두 돌려받아 다시 나눔
+    const st = s.stat && typeof s.stat === 'object' && oldStatV === 2 ? s.stat : {}; if (oldStatV !== 2) { s.statV = 2; if (s.lv > 1) s.statReset = true; }
+    s.stat = {}; D.STAT.keys.forEach(k => { s.stat[k] = clamp(Math.floor(+st[k] || 0), 0, D.STAT.max); });
+    const total = (s.lv - 1) * (CFG.statPerLevel || 2), used = D.STAT.keys.reduce((a, k) => a + s.stat[k], 0);
+    if (used > total) { D.STAT.keys.forEach(k => { s.stat[k] = 0; }); s.sp = total; } else s.sp = total - used;
     return s;
   }
   const Store = {
@@ -161,13 +163,23 @@
   .rg-sp { font-size: 14px; color: #C9D0F0; } .rg-sp b { font-family: var(--f-display); font-size: 22px; color: #FFD23F; margin-left: 6px; }
   .rg-st { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "lab btns" "ds btns"; gap: 0 10px; align-items: center; background: #141A3C; border: 2px solid #0A0E24; border-left: 5px solid var(--c); border-radius: 10px; padding: 5px 10px; }
   .rg-st .lab { grid-area: lab; display: flex; align-items: baseline; gap: 10px; } .rg-st .lab b { color: var(--c); font-family: var(--f-display); font-size: 18px; } .rg-st .lab span { font-family: var(--f-display); font-size: 20px; color: #FFFFFF; }
-  .rg-st small { grid-area: ds; color: #AEB7E0; font-size: 12px; }
+  .rg-st small { grid-area: ds; color: #AEB7E0; font-size: 12px; } .rg-st .lab small.mx { font-size: 12px; color: #8A93C0; }
   .rg-st .btns { grid-area: btns; display: flex; gap: 6px; } .rg-st .btns .rg-mini { font-size: 15px; padding: 6px 12px; }
   .rg-detailgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; }
   .rg-detailgrid div { background: #141A3C; border: 2px solid #0A0E24; border-radius: 10px; padding: 7px 9px; display: grid; gap: 1px; }
   .rg-detailgrid span { font-size: 12px; } .rg-detailgrid b { font-family: var(--f-display); font-size: 19px; color: #FFFFFF; }
   .rg-detailgrid small { font-size: 11px; color: #AEB7E0; line-height: 1.35; } .rg-detailgrid small.pt { color: #8A93C0; }
   .rg-detailgrid em { font-style: normal; } .rg-detailgrid em.s { color: #FFD23F; } .rg-detailgrid em.g { color: #9AE6FF; }
+  /* v44 거래 */
+  .rg-trade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rg-trade .rg-bag.ok { border-color: #3DDC84; box-shadow: 0 0 0 2px #3DDC84 inset; }
+  .rg-trade .tt { display: flex; align-items: center; gap: 8px; font-family: var(--f-display); font-size: 16px; margin-bottom: 6px; }
+  .rg-trade .tt em { font-style: normal; font-size: 12px; background: #3DDC84; color: #0A0E24; border-radius: 6px; padding: 0 6px; }
+  .rg-trlist { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; min-height: 52px; align-items: start; }
+  .rg-trempty { grid-column: 1 / -1; color: #8A93C0; font-size: 13px; padding: 10px 0; }
+  .rg-trgold { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; }
+  .rg-trgold input { width: 110px; color: #1D2340; padding: 4px 6px; border-radius: 6px; border: 2px solid #0A0E24; font-size: 14px; }
+  .rg-trgold small { color: #AEB7E0; }
   /* v42 서버 고르기 */
   .rg-srvs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
   .rg-srv { position: relative; display: grid; gap: 6px; text-align: left; background: linear-gradient(180deg, #2A3266, #182050); color: #EEF1FF; border: 2px solid #0A0E24; border-radius: 12px; padding: 10px 10px 8px; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,.3); transition: transform .1s, filter .1s; }
@@ -231,7 +243,7 @@
   }
   @media (max-width: 760px) {
     .rg-inv { grid-template-columns: 1fr; } .rg-grid { grid-template-columns: repeat(6, 1fr); } .rg-srvs { grid-template-columns: repeat(2, 1fr); }
-    .rg-statwin { grid-template-columns: 1fr; } .rg-detailgrid { grid-template-columns: repeat(2, 1fr); }
+    .rg-statwin { grid-template-columns: 1fr; } .rg-detailgrid { grid-template-columns: repeat(2, 1fr); } .rg-trade { grid-template-columns: 1fr; }
     .rg-panel { position: fixed; inset: auto 0 0 0; max-height: 72svh; border-radius: 14px 14px 0 0; z-index: 60; }
     .rg-msg { font-size: 12px; }
   }`;
@@ -258,6 +270,7 @@
               <button type="button" class="btn" data-rg="servers">서버</button>
               <button type="button" class="btn" data-rg="help">도움말</button>
               <button type="button" class="btn" data-rg="full">크게 보기</button>
+              <a class="btn" href="#scfight" style="background:#9A5AE0;color:#fff">Skillcom Fight 대결</a>
               <button type="button" class="btn btn-sun" data-rg="save">지금 저장</button>
             </div>
             <div class="rg-side">
@@ -280,15 +293,14 @@
       /* ---------- 능력치 ---------- */
       // 능력치 = 레벨 기본 + 스탯(힘·민첩·지혜) + 장비.  part = 창에서 '기본 + 스탯 + 장비' 로 나눠 보여 줄 때
       function stats(part) {
-        const F = D.F, T = D.STAT, lv = S.lv, a = S.stat || { str: 0, dex: 0, int: 0 };
-        const base = { atk: F.atk(lv), mag: F.mag(lv), def: F.def(lv), hp: F.hp(lv), mp: F.mp(lv), spd: 0, aspd: 0, crit: T.baseCrit };
-        const sta = { atk: a.str * T.str.atk, def: a.str * T.str.def, hp: a.str * T.str.hp, aspd: a.dex * T.dex.aspd, crit: a.dex * T.dex.crit, mag: a.int * T.int.mag, mp: a.int * T.int.mp };
+        const F = D.F, T = D.STAT, lv = S.lv, a = S.stat || {};
+        const base = { atk: F.atk(lv), mag: F.mag(lv), def: F.def(lv), hp: F.hp(lv), mp: F.mp(lv), spd: 0, dmg: 0, mpRegen: 100, crit: T.baseCrit };
+        const sta = { dmg: (a.str || 0) * T.str.dmg, spd: (a.dex || 0) * T.dex.spd, mpRegen: (a.int || 0) * T.int.mpRegen, hp: Math.round(base.hp * (a.vit || 0) * T.vit.hpPct / 100) };
         const gear = {}; Object.values(S.eq).forEach(id => { const it = ITEMS[id]; if (it && it.st) Object.keys(it.st).forEach(k => { gear[k] = (gear[k] || 0) + it.st[k]; }); });
         if (part) return { base, sta, gear };
         const st = {}; Object.keys(base).forEach(k => { st[k] = base[k] + (sta[k] || 0) + (gear[k] || 0); });
         ['atk', 'mag', 'def', 'hp', 'mp'].forEach(k => { st[k] = Math.round(st[k]); });
-        st.crit = Math.min(T.critMax, Math.round(st.crit * 10) / 10); st.aspd = Math.round(st.aspd * 10) / 10;
-        st.atkCd = Math.max(T.atkCdMin, T.atkCd / (1 + st.aspd / 100));
+        st.atkCd = T.atkCd;
         return st;
       }
       let ST = null; const restat = () => { ST = stats(); S.hp = clamp(S.hp, 0, ST.hp); S.mp = clamp(S.mp, 0, ST.mp); };
@@ -341,8 +353,75 @@
           me: () => ({ nick: Hub.user ? Hub.user.nickname : '손님', lv: S.lv, av: Hub.user ? Hub.user.avatar : AV.normalize({}), eq: S.eq, hide: S.hide, x: G.px, y: G.py }),
           onPeers: () => {},
           onFx: (m, p) => peerFx(m, p),
+          onTrade: (m, p) => onTrade(m, p),
+          onLeave: cid => { if (G.trade && G.trade.with === cid) { say('상대가 떠나서 거래가 취소됐어요', 2.6); endTrade(false); } },
           onKick: why => { say(why === 'full' ? '서버 인원이 가득 차서 나왔어요. 다른 서버를 골라 주세요' : '서버 연결이 끊겼어요. 다시 골라 주세요', 4); if (!pane) openPanel('servers'); }
         });
+      }
+      /* ---------- v44 1:1 거래 ----------
+       *  같은 지도에 있는 사람을 누르거나(F 키: 가까운 사람) → 거래 신청 → 상대가 수락 → 서로 아이템·골드를 올림
+       *  둘 다 '확인'을 누르면 교환. 올린 것이 바뀌면 확인이 풀림. 입고 있는 장비는 못 올림(가방에 있는 것만)
+       *  확인은 '두 사람이 올린 것 전체'를 글자로 만든 열쇠(key)로 맞춰 봄 → 둘이 본 내용이 같을 때만 교환 */
+      const offerOf = o => ({ items: Object.keys(o.items).filter(id => o.items[id] > 0).sort().map(id => [id, o.items[id]]), gold: o.gold | 0 });
+      const tradeKey = () => { const T = G.trade, a = JSON.stringify(offerOf(T.mine)), b = JSON.stringify(offerOf(T.theirs)); return Hub.clientId < T.with ? a + '|' + b : b + '|' + a; };
+      function cleanOffer(m) {
+        const items = {}; (Array.isArray(m.items) ? m.items : []).slice(0, 12).forEach(x => { if (Array.isArray(x) && ITEMS[x[0]]) items[x[0]] = clamp(Math.floor(+x[1] || 0), 0, 999); });
+        return { items, gold: clamp(Math.floor(+m.gold || 0), 0, 1e9) };
+      }
+      function askTrade(pp) {
+        if (!net || !net.joined) return;
+        if (G.trade) { say('이미 거래 중이에요', 2); return; }
+        openPanel('tradeAsk', { pp });
+      }
+      function sendOffer() { const T = G.trade; T.myOk = false; T.theirOk = false; const o = offerOf(T.mine); net.trade({ k: 'offer', to: T.with, items: o.items, gold: o.gold }); }
+      function startTrade(cid, nick) {
+        G.trade = { with: cid, nick, state: 'open', mine: { items: {}, gold: 0 }, theirs: { items: {}, gold: 0 }, myOk: false, theirOk: false };
+        tab.trSel = null; openPanel('trade');
+      }
+      function endTrade(tell) {
+        const T = G.trade; if (!T) return;
+        if (tell) net.trade({ k: 'cancel', to: T.with });
+        G.trade = null; if (pane === 'trade' || pane === 'tradeIn') { pane = null; panel.hidden = true; G.paused = false; }
+      }
+      function roomFor(theirs, mine) {   // 받을 물건이 가방 40칸에 들어가나
+        let slots = S.inv.length;
+        Object.keys(mine.items).forEach(id => { if (mine.items[id] > 0 && mine.items[id] >= count(id)) slots--; });
+        Object.keys(theirs.items).forEach(id => { if (theirs.items[id] > 0 && !(count(id) - (mine.items[id] || 0) > 0)) slots++; });
+        return slots <= 40;
+      }
+      function applyTrade() {
+        const T = G.trade; if (!T) return;
+        const ok = Object.keys(T.mine.items).every(id => count(id) >= T.mine.items[id]) && S.gold >= T.mine.gold;
+        if (!ok) { say('가방이 바뀌어서 거래를 할 수 없어요', 3); endTrade(true); return; }
+        Object.keys(T.mine.items).forEach(id => { if (T.mine.items[id] > 0) takeItem(id, T.mine.items[id]); });
+        S.gold -= T.mine.gold;
+        Object.keys(T.theirs.items).forEach(id => { const n = T.theirs.items[id]; if (n > 0) { const e = S.inv.find(x => x.id === id); if (e) e.n += n; else S.inv.push({ id, n }); } });
+        S.gold += T.theirs.gold;
+        const nick = T.nick; G.trade = null; save(true); markDirty(true);
+        if (pane === 'trade') { pane = null; panel.hidden = true; G.paused = false; }
+        say(`${nick}님과 거래 완료!`, 3); Fx.coins(G.px, G.py - 30, 8);
+      }
+      function onTrade(m, p) {
+        const T = G.trade, nick = p.nick || '상대';
+        if (m.k === 'req') {
+          if (T || pane || G.dead) { net.trade({ k: 'busy', to: m.cid }); return; }
+          openPanel('tradeIn', { cid: m.cid, nick }); return;
+        }
+        if (!T || T.with !== m.cid) return;
+        if (m.k === 'busy' || m.k === 'no') { say(m.k === 'busy' ? `${nick}님은 지금 다른 일을 하고 있어요` : `${nick}님이 거래를 거절했어요`, 2.6); G.trade = null; return; }
+        if (m.k === 'yes' && T.state === 'wait') { startTrade(m.cid, nick); return; }
+        if (m.k === 'cancel') { say(`${nick}님이 거래를 취소했어요`, 2.6); endTrade(false); return; }
+        if (m.k === 'offer') { T.theirs = cleanOffer(m); T.myOk = false; T.theirOk = false; if (pane === 'trade') renderPanel(); return; }
+        if (m.k === 'ok') { T.theirOk = m.key === tradeKey(); if (T.myOk && T.theirOk && Hub.clientId < T.with) { net.trade({ k: 'commit', to: T.with, key: tradeKey() }); applyTrade(); return; } if (pane === 'trade') renderPanel(); return; }
+        if (m.k === 'unok') { T.theirOk = false; if (pane === 'trade') renderPanel(); return; }
+        if (m.k === 'commit') { if (T.myOk && m.key === tradeKey()) applyTrade(); return; }
+      }
+      // 화면 좌표(캔버스) → 그 자리에 있는 다른 플레이어
+      function peerAt(q) {
+        if (!net || !net.peers.size) return null;
+        const wx = q.x + cam.x, wy = q.y + cam.y; let best = null, bd = 40;
+        net.peers.forEach(pp => { if (wy < pp.y - 70 || wy > pp.y + 8) return; const d = Math.abs(wx - pp.x); if (d < bd) { bd = d; best = pp; } });
+        return best;
       }
       // 다른 사람이 쓴 마법: 그림만 (피해 없음)
       function peerFx(m, p) {
@@ -397,9 +476,9 @@
         if (m.dead) return 0;
         opt = opt || {};
         const diff = m.lvl - S.lv, lvF = diff > 0 ? Math.max(0.4, 1 - 0.06 * diff) : 1 + Math.min(0.3, -diff * 0.03);
-        let dmg = (base * rand(0.9, 1.1) - m.mdef * 0.5) * lvF;
+        let dmg = (base * rand(0.9, 1.1) * (1 + (ST.dmg || 0) / 100) - m.mdef * 0.5) * lvF;   // v44 힘 → 주는 피해 +%
         if ((els || []).some(e => ELEM[e].fx === 'heavy')) dmg *= 1.2;
-        const crit = Math.random() < ST.crit / 100; if (crit) dmg *= D.STAT.critDmg;   // v43 민첩 → 치명타 확률
+        const crit = Math.random() < ST.crit / 100; if (crit) dmg *= D.STAT.critDmg;
         dmg = Math.max(1, Math.round(dmg));
         m.hp -= dmg; m.flash = 0.12; m.aggro = true; m.knock = (m.x < G.px ? -1 : 1) * (crit ? 6 : 3);
         const elc = els && els.length ? Fx.pal(els[0])[1] : '#FFFFFF';
@@ -440,7 +519,7 @@
         if (S.lv >= D.MAX_LV) return;
         S.exp += n;
         let up = false;
-        while (S.lv < D.MAX_LV && S.exp >= D.F.need(S.lv)) { S.exp -= D.F.need(S.lv); S.lv++; S.sp += CFG.statPerLevel || 3; up = true; }
+        while (S.lv < D.MAX_LV && S.exp >= D.F.need(S.lv)) { S.exp -= D.F.need(S.lv); S.lv++; S.sp += CFG.statPerLevel || 2; up = true; }
         if (S.lv >= D.MAX_LV) S.exp = 0;
         if (up) {
           restat(); S.hp = ST.hp; S.mp = ST.mp;
@@ -448,7 +527,7 @@
           Fx.levelUp(G.px, G.py); G.flash = 0.25;
           const learnable = Object.values(SKILLS).filter(s => s.lv === S.lv);
           if (learnable.length) say(`Lv.${S.lv} — 마법 학교에서 '${learnable[0].name}'을(를) 배울 수 있어요!`, 3.5);
-          else say(`스탯 포인트 +${CFG.statPerLevel || 3}! 왼쪽 위 얼굴을 눌러 힘·민첩·지혜를 올려요`, 3.2);
+          else say(`스탯 포인트 +${CFG.statPerLevel || 2}! 왼쪽 위 얼굴을 눌러 원하는 스탯을 올려요`, 3.2);
           submitRank(); markDirty(true); if (net) net.retrack();
         }
       }
@@ -520,7 +599,7 @@
       }
       function basicAttack() {
         if (G.atkCd > 0 || G.dead) return;
-        G.atkCd = ST.atkCd;   // v43 민첩 → 공격 속도
+        G.atkCd = ST.atkCd;
         const staff = S.eq.weapon && ITEMS[S.eq.weapon].look === 'staff';
         const [dx, dy] = aimDir(staff ? 150 : 70);
         G.face = dx < 0 ? -1 : 1;
@@ -591,7 +670,7 @@
         if (G.shield && (G.shield.t -= dt) <= 0) G.shield = null;
         // 자연 회복
         const reg = (M.kind !== 'field' ? 3 : 1) * (G.lastHit > 5 ? 1 : 0.25);
-        S.hp = Math.min(ST.hp, S.hp + ST.hp * 0.012 * reg * dt); S.mp = Math.min(ST.mp, S.mp + ST.mp * 0.02 * reg * dt);
+        S.hp = Math.min(ST.hp, S.hp + ST.hp * 0.012 * reg * dt); S.mp = Math.min(ST.mp, S.mp + ST.mp * 0.02 * reg * (ST.mpRegen / 100) * dt);   // v44 지혜 → 마나 회복
 
         // 입력 → 이동
         let mx = 0, my = 0; const K = G.keys;
@@ -1081,6 +1160,8 @@
       function closePanel() {
         if (pane === 'dead') return;
         const wasDoor = ['potion', 'school', 'chief', 'castle'].includes(pane);
+        if (pane === 'trade' && G.trade) { endTrade(true); say('거래를 취소했어요', 2); return; }
+        if (pane === 'tradeIn' && paneArg) net.trade({ k: 'no', to: paneArg.cid });
         const was = pane; pane = null; panel.hidden = true; G.paused = false;
         if (was === 'help' && Hub.user && net && !net.joined && !G.srvAsked) { G.srvAsked = true; openPanel('servers'); return; }
         if (wasDoor && G.onDoor) { const b = G.onDoor; G.px = (b.door.x + 0.5) * TS; G.py = (b.door.y + 1.9) * TS; G.onDoor = null; }
@@ -1159,22 +1240,38 @@
           h += '<p class="sub" style="margin-top:8px">※ 퀘스트는 준비 중이에요. 나중에 마지막 마을의 성에서 나눠 줄 예정이에요.</p>';
         } else if (k === 'castle') {
           h = head('왕성', '퀘스트는 아직 준비 중이에요. 다음 업데이트에서 이곳에서 퀘스트를 받을 수 있어요.') + npcBox();
-        } else if (k === 'stat') {   // v43 스탯 창: 왼쪽 캐릭터 · 오른쪽 힘·민첩·지혜 올리기 · 아래 자세한 능력치
-          const T = D.STAT, a = S.stat, PT = stats(true), used = a.str + a.dex + a.int, per = CFG.statPerLevel || 3;
+        } else if (k === 'tradeAsk') {
+          const pp = paneArg.pp;
+          h = head('거래 신청', '같은 지도에 있는 사람과 아이템·골드를 바꿀 수 있어요. 두 사람 모두 확인을 눌러야 바뀌어요.');
+          h += `<div class="rg-fuse"><b style="color:#9AE6FF">${pp.nick}</b> (Lv.${pp.lv}) 님에게 거래를 신청할까요?</div><div class="rg-srvact"><button type="button" class="rg-mini" data-trreq="${pp.cid}">거래 신청</button><button type="button" class="rg-mini ghost" data-x>취소</button></div>`;
+        } else if (k === 'tradeIn') {
+          h = `<h3>거래 신청이 왔어요</h3><div class="rg-fuse"><b style="color:#9AE6FF">${paneArg.nick}</b> 님이 거래를 하고 싶어 해요.</div><div class="rg-srvact"><button type="button" class="rg-mini" data-tryes="${paneArg.cid}">수락</button><button type="button" class="rg-mini ghost" data-trno="${paneArg.cid}">거절</button></div>`;
+        } else if (k === 'trade') {
+          const T = G.trade; if (!T) { h = head('거래', '거래가 끝났어요.'); panel.innerHTML = h; return; }
+          const list = (o, mine) => { const ids = Object.keys(o.items).filter(id => o.items[id] > 0); return ids.length ? ids.map(id => `<${mine ? 'button type="button" data-trdel="' + id + '"' : 'span'} class="rg-cell${ITEMS[id].rare ? ' rare' : ''}" title="${ITEMS[id].name}${mine ? ' (누르면 빼기)' : ''}"><img src="${P.itemImg(id)}" alt="${ITEMS[id].name}"><span class="n">${o.items[id]}</span></${mine ? 'button' : 'span'}>`).join('') : '<span class="rg-trempty">아직 없어요</span>'; };
+          h = `<h3>${T.nick}님과 거래<button type="button" class="x" data-trcancel>거래 취소</button></h3>`;
+          h += `<div class="rg-trade"><section class="rg-bag${T.myOk ? ' ok' : ''}"><b class="tt">내가 줄 것 ${T.myOk ? '<em>확인</em>' : ''}</b><div class="rg-trlist">${list(T.mine, true)}</div><label class="rg-trgold">골드 <input type="number" min="0" max="${S.gold}" value="${T.mine.gold}" data-trgold> <small>/ ${fmtN(S.gold)} G</small></label></section>`;
+          h += `<section class="rg-bag${T.theirOk ? ' ok' : ''}"><b class="tt">${T.nick}님이 줄 것 ${T.theirOk ? '<em>확인</em>' : ''}</b><div class="rg-trlist">${list(T.theirs, false)}</div><div class="rg-trgold">골드 <b class="rg-gold">${fmtN(T.theirs.gold)} G</b></div></section></div>`;
+          const bag = S.inv.filter(x => count(x.id) - (T.mine.items[x.id] || 0) > 0);
+          h += `<p class="sub" style="margin-top:10px">내 가방 — 눌러서 올리기 (입고 있는 장비는 못 올려요)</p><div class="rg-grid">${bag.map(x => { const left = x.n - (T.mine.items[x.id] || 0), it = ITEMS[x.id]; return `<button type="button" class="rg-cell${it.rare ? ' rare' : ''}" data-tradd="${x.id}" title="${it.name}"><img src="${P.itemImg(x.id)}" alt="${it.name}">${left > 1 ? `<span class="n">${left}</span>` : ''}</button>`; }).join('') || '<span class="rg-trempty">올릴 물건이 없어요</span>'}</div>`;
+          const room = roomFor(T.theirs, T.mine);
+          h += `<div class="rg-srvact" style="align-items:center"><button type="button" class="rg-mini${T.myOk ? ' on' : ''}" data-trok ${room ? '' : 'disabled'}>${T.myOk ? '확인함 (다시 누르면 풀기)' : '확인'}</button><span class="sub" style="margin:0">${!room ? '가방이 모자라요 (40칸)' : T.myOk && T.theirOk ? '교환하는 중…' : T.myOk ? '상대가 확인하면 바뀌어요' : T.theirOk ? '상대는 확인했어요. 내용을 보고 확인을 눌러요' : '둘 다 확인을 누르면 바뀌어요'}</span></div>`;
+        } else if (k === 'stat') {   // v44 스탯 창: 왼쪽 캐릭터 · 오른쪽 힘·민첩·지혜·체력 올리기 · 아래 자세한 능력치
+          const T = D.STAT, a = S.stat, PT = stats(true), used = T.keys.reduce((x, q) => x + a[q], 0), per = CFG.statPerLevel || 2;
           const av = Hub.user ? Hub.user.avatar : AV.normalize({}), fig = avatarSprite(av, S.eq, S.hide, 0).toDataURL(), ex = S.lv >= D.MAX_LV ? 100 : S.exp / D.F.need(S.lv) * 100;
-          h = head('스탯', `레벨이 오를 때마다 포인트 ${per}개 · 힘·민첩·지혜에 나눠 올려요`);
+          h = head('스탯', `레벨이 오를 때마다 포인트 ${per}개 · 원하는 스탯에 올려요 (스탯마다 최대 ${T.max})`);
           h += `<div class="rg-statwin"><section class="rg-doll rg-statfig"><div class="rg-fig"><img src="${fig}" alt="내 캐릭터"><span class="lv">Lv.${S.lv}</span></div><b class="nm">${Hub.user ? Hub.user.nickname : '손님'}</b><div class="rg-xp"><i style="width:${ex.toFixed(1)}%"></i></div><small>경험치 ${ex.toFixed(1)}%</small></section>`;
-          h += `<section class="rg-bag rg-alloc"><div class="rg-sp">남은 포인트 <b>${S.sp}</b></div>${['str', 'dex', 'int'].map(q => `<div class="rg-st" style="--c:${T[q].color}"><div class="lab"><b>${T[q].name}</b><span>${a[q]}</span></div><small>${T[q].desc}</small><div class="btns"><button type="button" class="rg-mini" data-addst="${q}:1" ${S.sp < 1 ? 'disabled' : ''}>+1</button><button type="button" class="rg-mini ghost" data-addst="${q}:5" ${S.sp < 5 ? 'disabled' : ''}>+5</button></div></div>`).join('')}<div class="rg-srvact"><button type="button" class="rg-mini ghost" data-streset ${used ? '' : 'disabled'}>포인트 다시 나누기 (무료)</button></div></section></div>`;
+          h += `<section class="rg-bag rg-alloc"><div class="rg-sp">남은 포인트 <b>${S.sp}</b></div>${T.keys.map(q => { const full = a[q] >= T.max; return `<div class="rg-st" style="--c:${T[q].color}"><div class="lab"><b>${T[q].name}</b><span>${a[q]}<small class="mx"> / ${T.max}</small></span></div><small>${T[q].desc}</small><div class="btns"><button type="button" class="rg-mini" data-addst="${q}:1" ${S.sp < 1 || full ? 'disabled' : ''}>+1</button><button type="button" class="rg-mini ghost" data-addst="${q}:5" ${S.sp < 1 || full ? 'disabled' : ''}>+5</button></div></div>`; }).join('')}<div class="rg-srvact"><button type="button" class="rg-mini ghost" data-streset ${used ? '' : 'disabled'}>포인트 다시 나누기 (무료)</button></div></section></div>`;
           const fm = v => (Math.round(v * 10) / 10).toLocaleString('ko-KR'), pt = (k2, unit) => { const b = PT.base[k2] || 0, sv = PT.sta[k2] || 0, g = PT.gear[k2] || 0; return [b ? `기본 ${fm(b)}${unit}` : '', sv ? `<em class="s">스탯 +${fm(sv)}${unit}</em>` : '', g ? `<em class="g">장비 +${fm(g)}${unit}</em>` : ''].filter(Boolean).join(' · ') || '—'; };
           const rows = [
+            ['주는 피해', '+' + fm(ST.dmg || 0) + '%', '기본 공격·마법 모두', pt('dmg', '%'), '#FF8A8E'],
             ['공격력', ST.atk, '기본 공격 피해', pt('atk', ''), '#FF8A8E'],
             ['마력', ST.mag, '마법 피해 (마법 위력 × 마력)', pt('mag', ''), '#C8A8FF'],
             ['방어력', ST.def, `받는 피해 −${fm(ST.def * 0.5)}`, pt('def', ''), '#9AE6FF'],
-            ['최대 체력', ST.hp, '', pt('hp', ''), '#FF7A7E'],
+            ['최대 체력', ST.hp, '', pt('hp', ''), '#FFB86B'],
             ['최대 마나', ST.mp, '', pt('mp', ''), '#7FA0FF'],
-            ['공격 속도', '+' + fm(ST.aspd) + '%', `기본 공격 1초에 ${(1 / ST.atkCd).toFixed(2)}번`, pt('aspd', '%'), '#9AF0B0'],
-            ['치명타 확률', fm(ST.crit) + '%', `치명타 피해 ×${T.critDmg} · 최대 ${T.critMax}%`, pt('crit', '%'), '#FFD23F'],
-            ['이동 속도', '+' + (ST.spd || 0) + '%', '', pt('spd', '%'), '#C9D0F0']
+            ['마나 회복', fm(ST.mpRegen) + '%', `싸우지 않을 때 1초에 마나 ${fm(ST.mp * 0.02 * ST.mpRegen / 100)}`, pt('mpRegen', '%'), '#C8A8FF'],
+            ['이동 속도', '+' + fm(ST.spd || 0) + '%', '', pt('spd', '%'), '#9AF0B0']
           ];
           h += `<div class="rg-detailgrid">${rows.map(([n, v, d2, parts, c2]) => `<div><span style="color:${c2}">${n}</span><b>${v}</b>${d2 ? `<small>${d2}</small>` : ''}<small class="pt">${parts}</small></div>`).join('')}</div>`;
         } else if (k === 'servers') {   // v42 서버 고르기
@@ -1201,6 +1298,8 @@
             <li>지도 <b>오른쪽 끝 → 다음 지도</b>, 왼쪽 끝 → 이전 지도. 마을 → 사냥터 10곳 → 다음 마을 … 마을 하나가 10레벨씩(새싹 마을 Lv.1~10 … 하늘섬 마을 Lv.71~80), 마지막 불꽃왕성은 Lv.80~100.</li>
             <li>문으로 걸어 들어가면 <b>건물 안</b>이에요. 안에 있는 사람에게 가까이 가면 이야기해요: <b>포션 가게</b> 미나 · <b>마법 학교</b> 루멘(마법 배우기·융합) · <b>이장 집</b> 이장님(무료 이동·저장). 아래 가운데 문으로 나가요.</li>
             <li>처음부터 <b>마법 화살</b>(1번 키)을 쓸 수 있어요.</li>
+            <li><b>스탯</b>: 레벨이 오를 때마다 포인트 2개 — 왼쪽 위 얼굴(또는 C)을 눌러 힘(피해)·민첩(이동 속도)·지혜(마나 회복)·체력(최대 체력)에 올려요. 스탯마다 최대 50.</li>
+            <li><b>거래</b>: 온라인 서버에서 같은 지도에 있는 사람을 누르거나 가까이 가서 F → 거래 신청. 둘 다 확인을 누르면 아이템·골드가 바뀌어요.</li>
             <li>직업은 없어요. 레벨이 오르면 마법 학교에서 새 마법을 배우고, 두 원소를 섞어 <b>융합 마법</b>을 만들어요.</li>
             <li>장비는 몬스터가 떨어뜨려요(보스는 꼭). 입으면 아바타 위에 보이고, 가방의 <b>장비 안보이기</b>로 그림만 숨길 수 있어요.</li>
             <li>쓰러지면 경험치가 조금 줄고 마지막 마을에서 다시 시작해요. <b>귀환 주문서</b>로 언제든 마을로 돌아갈 수 있어요.</li>
@@ -1232,6 +1331,7 @@
       }
       panel.addEventListener('change', e => {
         const t = e.target;
+        if (t.matches('[data-trgold]')) { const T = G.trade; if (!T) return; T.mine.gold = clamp(Math.floor(+t.value || 0), 0, S.gold); sendOffer(); renderPanel(); return; }
         if (t.matches('[data-hide]')) { S.hide = t.checked; markDirty(); if (net) net.retrack(); renderPanel(); }
         else if (t.matches('[data-fa]')) { tab.fa = t.value; if (tab.fb === t.value || (SKILLS[tab.fb] && SKILLS[tab.fb].el === SKILLS[t.value].el)) tab.fb = null; renderPanel(); }
         else if (t.matches('[data-fb]')) { tab.fb = t.value; renderPanel(); }
@@ -1266,8 +1366,15 @@
           S.gold -= price; S.skills.push(id); const free = S.slots.indexOf(null); if (free >= 0) S.slots[free] = id;
           say(`융합 성공! '${skill(id).name}'`, 3); markDirty(true);
         } else if (d.go) { const id = d.go; pane = null; panel.hidden = true; G.paused = false; enter(id, MAPBY[id].kind === 'village' ? 'door' : 'L'); return; }
-        else if (d.addst) { const [q, n0] = d.addst.split(':'), n = Math.min(+n0, S.sp); if (n > 0 && S.stat[q] != null) { S.stat[q] += n; S.sp -= n; const hr = S.hp / ST.hp; restat(); if (q === 'str') S.hp = Math.round(ST.hp * hr); markDirty(true); } }
-        else if ('streset' in d) { S.sp += S.stat.str + S.stat.dex + S.stat.int; S.stat = { str: 0, dex: 0, int: 0 }; restat(); markDirty(true); say('스탯 포인트를 모두 돌려받았어요. 다시 나눠 주세요', 2.4); }
+        else if (d.addst) { const [q, n0] = d.addst.split(':'), n = Math.min(+n0, S.sp, D.STAT.max - (S.stat[q] || 0)); if (n > 0 && S.stat[q] != null) { S.stat[q] += n; S.sp -= n; const hr = S.hp / ST.hp; restat(); if (q === 'vit') S.hp = Math.round(ST.hp * hr); markDirty(true); } }
+        else if ('streset' in d) { D.STAT.keys.forEach(q => { S.sp += S.stat[q]; S.stat[q] = 0; }); restat(); markDirty(true); say('스탯 포인트를 모두 돌려받았어요. 다시 나눠 주세요', 2.4); }
+        else if (d.trreq) { const pp = net.peers.get(d.trreq); if (!pp) { say('상대가 이 지도에 없어요', 2); closePanel(); return; } G.trade = { with: pp.cid, nick: pp.nick, state: 'wait' }; net.trade({ k: 'req', to: pp.cid }); pane = null; panel.hidden = true; G.paused = false; say(`${pp.nick}님에게 거래 신청을 보냈어요…`, 3); setTimeout(() => { if (G.trade && G.trade.state === 'wait' && G.trade.with === pp.cid) { G.trade = null; say('대답이 없어서 거래 신청을 취소했어요', 2.6); } }, 20000); return; }
+        else if (d.tryes) { const pp = net.peers.get(d.tryes); if (!pp) { closePanel(); return; } net.trade({ k: 'yes', to: pp.cid }); startTrade(pp.cid, pp.nick); return; }
+        else if (d.trno) { net.trade({ k: 'no', to: d.trno }); pane = null; panel.hidden = true; G.paused = false; return; }
+        else if ('trcancel' in d) { endTrade(true); say('거래를 취소했어요', 2); return; }
+        else if (d.tradd) { const T = G.trade; if (!T) return; const id = d.tradd; if (count(id) - (T.mine.items[id] || 0) > 0 && Object.keys(T.mine.items).filter(q => T.mine.items[q] > 0).length < 12) { T.mine.items[id] = (T.mine.items[id] || 0) + 1; sendOffer(); } }
+        else if (d.trdel) { const T = G.trade; if (!T) return; T.mine.items[d.trdel] = Math.max(0, (T.mine.items[d.trdel] || 0) - 1); sendOffer(); }
+        else if ('trok' in d) { const T = G.trade; if (!T) return; T.myOk = !T.myOk; if (T.myOk) { net.trade({ k: 'ok', to: T.with, key: tradeKey() }); if (T.theirOk && Hub.clientId < T.with) { net.trade({ k: 'commit', to: T.with, key: tradeKey() }); applyTrade(); return; } } else net.trade({ k: 'unok', to: T.with }); }
         else if (d.srv) { joinServer(d.srv); return; }
         else if ('solo' in d) { if (net.joined) { net.leave(); say('혼자 하기로 바꿨어요', 2); } closePanel(); return; }
         else if ('savenow' in d) { save(true).then(ok => say(ok || !Store.online() ? '저장했어요' : '이 기기에 저장했어요 (서버 저장은 준비 중)')); return; }
@@ -1304,6 +1411,7 @@
         else if (e.code === 'KeyQ') usePotion('hp');
         else if (e.code === 'KeyE') usePotion('mp');
         else if (e.code === 'KeyF' || e.code === 'Enter') {
+          if (net && net.peers.size) { let pp = null, bd = 70; net.peers.forEach(q => { const dd = Math.hypot(G.px - q.x, G.py - q.y); if (dd < bd) { bd = dd; pp = q; } }); if (pp) { askTrade(pp); return; } }
           if (G.room) { const n = (G.npcs || []).find(q => Math.hypot(G.px - q.talk.x, G.py - q.talk.y) < q.talk.r * 1.4); if (n) talk(n); return; }
           const nv = (G.npcs || []).find(q => Math.hypot(G.px - q.x, G.py - q.y) < 70); if (nv) { nv.say = pick(nv.def.lines); nv.sayT = 3.2; return; }
           const tx = Math.floor(G.px / TS); const b = G.map.doors.find(x => Math.abs(x.door.x - tx) <= 1 && Math.abs((x.door.y + 1) * TS - G.py) < 48); if (b) { G.onDoor = b; enterRoom(b); }
@@ -1320,7 +1428,8 @@
       canvas.addEventListener('pointerdown', e => {
         if (!S || pane) return;
         if (e.pointerType === 'touch' || e.pointerType === 'pen') G.touch = true;
-        { const q = toC(e); if (q.x < 92 && q.y < 96 && !G.dead) { e.preventDefault(); openPanel('stat'); return; } }   // v43 왼쪽 위 얼굴 → 스탯 창
+        { const q = toC(e); if (q.x < 92 && q.y < 96 && !G.dead) { e.preventDefault(); openPanel('stat'); return; }   // v43 왼쪽 위 얼굴 → 스탯 창
+          if (!(G.touch && btnAt(q))) { const pp = peerAt(q); if (pp) { e.preventDefault(); askTrade(pp); return; } } }   // v44 다른 사람 누르기 → 거래
         if (!G.touch) { screenEl.focus({ preventScroll: true }); return; }
         e.preventDefault(); canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
         const p = toC(e), b = btnAt(p);
@@ -1384,7 +1493,8 @@
         G.paused = false; G.playMark = S.play;
         makeNet();
         fitScreen();
-        if (G.touch && innerHeight < 520 && !fsNow()) setTimeout(() => say('오른쪽 위 [ ] 버튼을 누르면 화면이 크게 보여요', 3.5), 1200);
+        if (S.statReset) { delete S.statReset; markDirty(true); setTimeout(() => say(`스탯이 힘·민첩·지혜·체력 4가지로 바뀌었어요! 포인트 ${S.sp}개를 다시 나눠 주세요 (왼쪽 위 얼굴)`, 5), 900); }
+        else if (G.touch && innerHeight < 520 && !fsNow()) setTimeout(() => say('오른쪽 위 [ ] 버튼을 누르면 화면이 크게 보여요', 3.5), 1200);
         if (!S.help) openPanel('help');
         else if (Hub.user) { G.srvAsked = true; openPanel('servers'); }
         loadRank();

@@ -22,7 +22,8 @@ GoSettings.register({
 
   stages: 10,                          // 스테이지 수
   waveSec: 40,                         // 보스가 나오기 전까지 시간(초) — 스테이지마다 +2초
-  bulletBase: 140,                     // 1스테이지 적 총알 빠르기 (화면 점/초)
+  bulletBase: 182,                     // 1스테이지 적 총알 빠르기 (화면 점/초) — v46: 140 → 182 (모든 스테이지 1.3배)
+  bulletCount: 1.5,                    // 적 총알 수 배율 — v46: 1.5배 (2발마다 짝 총알 1발 추가)
   bulletStep: 0.12,                    // 스테이지마다 총알 빠르기 +12% (10스테이지 = 약 2.1배)
   levelBullet: { easy: 0.85, normal: 1, hard: 1.15 },   // 난이도별 총알 빠르기 배율
   lives: { easy: 5, normal: 3, hard: 3 },             // 목숨
